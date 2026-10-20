@@ -1,22 +1,30 @@
+import argparse
 import os
 import numpy as np
 
-validation_dir = '../../Validation/'
-output_base_dir = '../../../out/'
+parser = argparse.ArgumentParser(description='Reduce vertical gas temperatures to HGL height and temperature.')
+parser.add_argument('--input', help='Path to one HGL.input file.')
+args = parser.parse_args()
 
-list_dir = os.listdir(validation_dir)
 output_dir = []
 input_file = []
-k = 0
 
-for name in list_dir:
-    output_directory = os.path.join(output_base_dir, name)
-    if os.path.exists(output_directory) and os.path.isdir(output_directory):
-        list_files = [f for f in os.listdir(output_directory) if f.endswith('HGL.input')]
-        if list_files:
+if args.input:
+    input_path = os.path.abspath(args.input)
+    if not os.path.isfile(input_path):
+        parser.error(f'HGL input file not found: {input_path}')
+    output_dir.append(os.path.dirname(input_path) + os.sep)
+    input_file.append(os.path.basename(input_path))
+else:
+    validation_dir = '../../Validation/'
+    output_base_dir = '../../../out/'
+    list_dir = os.listdir(validation_dir)
+    for name in list_dir:
+        output_directory = os.path.join(output_base_dir, name)
+        if os.path.exists(output_directory) and os.path.isdir(output_directory):
+            list_files = [f for f in os.listdir(output_directory) if f.endswith('HGL.input')]
             for file_name in list_files:
-                if not file_name.startswith('.'):  # ignore hidden files
-                    k += 1
+                if not file_name.startswith('.'):
                     output_dir.append(os.path.join(output_base_dir, name) + '/')
                     input_file.append(file_name)
 

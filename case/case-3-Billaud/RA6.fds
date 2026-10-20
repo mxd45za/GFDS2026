@@ -1,0 +1,138 @@
+&HEAD CHID='RA6',
+      TITLE='3D differentially heated cavity, DeltaT=10K, Ra about 1e6' /
+
+! ------------------------------------------------------------
+! Time
+! ------------------------------------------------------------
+&TIME T_END=20.0/
+
+! Verification-only output times: 0, 5, and 10 s.
+&DUMP DT_DEVC=1.0, DT_SLCF=1.0, DT_BNDF=1.0 /
+
+! ------------------------------------------------------------
+! 3D cavity geometry
+! L = 0.1 m in X, Y, Z
+! Verification grid: 50 x 50 x 50
+! dx = dy = dz = 0.002 m
+! ------------------------------------------------------------
+&MESH IJK=100,100,100, XB=0.0,0.1, 0.0,0.1, 0.0,0.1 /
+
+! ------------------------------------------------------------
+! Physics
+! TMPA = 25 C
+! Gravity in -Z direction
+! ------------------------------------------------------------
+&MISC TMPA=25.0, GVEC=0.0,0.0,-9.81 NOISE=.FALSE./
+! Billaud et al. Case C: transparent gas and black enclosure surfaces.
+&RADI RADIATION=.TRUE., KAPPA0=0.0, NUMBER_RADIATION_ANGLES=200, TIME_STEP_INCREMENT=1 /
+
+! ------------------------------------------------------------
+! Surface boundary conditions
+! Hot wall: 30 C
+! Cold wall: 20 C
+! Other walls: black with zero net heat flux
+! ------------------------------------------------------------
+&SURF ID='HOT_WALL',  TMP_FRONT=30.0, TAU_T=0.0, EMISSIVITY=1.0 /
+&SURF ID='COLD_WALL', TMP_FRONT=20.0, TAU_T=0.0, EMISSIVITY=1.0 /
+&SURF ID='PASSIVE_BLACK_ZERO_FLUX', NET_HEAT_FLUX=0.0, EMISSIVITY=1.0 /
+-----------------------------------
+! Boundary assignment
+! XMIN = hot wall
+! XMAX = cold wall
+! YMIN/YMAX/ZMIN/ZMAX = adiabatic
+! ------------------------------------------------------------
+&VENT MB='XMIN', SURF_ID='HOT_WALL' /
+&VENT MB='XMAX', SURF_ID='COLD_WALL' /
+
+&VENT MB='YMIN', SURF_ID='PASSIVE_BLACK_ZERO_FLUX' /
+&VENT MB='YMAX', SURF_ID='PASSIVE_BLACK_ZERO_FLUX' /
+
+&VENT MB='ZMIN', SURF_ID='PASSIVE_BLACK_ZERO_FLUX' /
+&VENT MB='ZMAX', SURF_ID='PASSIVE_BLACK_ZERO_FLUX' /
+
+! ------------------------------------------------------------
+! Slice output
+! temperature + total velocity magnitude
+! ------------------------------------------------------------
+
+&SLCF QUANTITY='TEMPERATURE', PBY=0.05 /
+
+&SLCF QUANTITY='VELOCITY', PBY=0.05 /
+
+
+! ------------------------------------------------------------
+! Vertical centerline: U(z)
+! x = 0.05, y = 0.05, z = cell centers
+! ------------------------------------------------------------
+&DEVC ID='U_Z_01', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.001667 /
+&DEVC ID='U_Z_02', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.005000 /
+&DEVC ID='U_Z_03', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.008333 /
+&DEVC ID='U_Z_04', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.011667 /
+&DEVC ID='U_Z_05', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.015000 /
+&DEVC ID='U_Z_06', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.018333 /
+&DEVC ID='U_Z_07', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.021667 /
+&DEVC ID='U_Z_08', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.025000 /
+&DEVC ID='U_Z_09', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.028333 /
+&DEVC ID='U_Z_10', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.031667 /
+&DEVC ID='U_Z_11', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.035000 /
+&DEVC ID='U_Z_12', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.038333 /
+&DEVC ID='U_Z_13', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.041667 /
+&DEVC ID='U_Z_14', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.045000 /
+&DEVC ID='U_Z_15', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.048333 /
+&DEVC ID='U_Z_16', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.051667 /
+&DEVC ID='U_Z_17', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.055000 /
+&DEVC ID='U_Z_18', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.058333 /
+&DEVC ID='U_Z_19', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.061667 /
+&DEVC ID='U_Z_20', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.065000 /
+&DEVC ID='U_Z_21', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.068333 /
+&DEVC ID='U_Z_22', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.071667 /
+&DEVC ID='U_Z_23', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.075000 /
+&DEVC ID='U_Z_24', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.078333 /
+&DEVC ID='U_Z_25', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.081667 /
+&DEVC ID='U_Z_26', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.085000 /
+&DEVC ID='U_Z_27', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.088333 /
+&DEVC ID='U_Z_28', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.091667 /
+&DEVC ID='U_Z_29', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.095000 /
+&DEVC ID='U_Z_30', QUANTITY='U-VELOCITY', XYZ=0.05,0.05,0.098333 /
+
+! ------------------------------------------------------------
+! Horizontal centerline: W(x)
+! y = 0.05, z = 0.05, x = cell centers
+! ------------------------------------------------------------
+&DEVC ID='W_X_01', QUANTITY='W-VELOCITY', XYZ=0.001667,0.05,0.05 /
+&DEVC ID='W_X_02', QUANTITY='W-VELOCITY', XYZ=0.005000,0.05,0.05 /
+&DEVC ID='W_X_03', QUANTITY='W-VELOCITY', XYZ=0.008333,0.05,0.05 /
+&DEVC ID='W_X_04', QUANTITY='W-VELOCITY', XYZ=0.011667,0.05,0.05 /
+&DEVC ID='W_X_05', QUANTITY='W-VELOCITY', XYZ=0.015000,0.05,0.05 /
+&DEVC ID='W_X_06', QUANTITY='W-VELOCITY', XYZ=0.018333,0.05,0.05 /
+&DEVC ID='W_X_07', QUANTITY='W-VELOCITY', XYZ=0.021667,0.05,0.05 /
+&DEVC ID='W_X_08', QUANTITY='W-VELOCITY', XYZ=0.025000,0.05,0.05 /
+&DEVC ID='W_X_09', QUANTITY='W-VELOCITY', XYZ=0.028333,0.05,0.05 /
+&DEVC ID='W_X_10', QUANTITY='W-VELOCITY', XYZ=0.031667,0.05,0.05 /
+&DEVC ID='W_X_11', QUANTITY='W-VELOCITY', XYZ=0.035000,0.05,0.05 /
+&DEVC ID='W_X_12', QUANTITY='W-VELOCITY', XYZ=0.038333,0.05,0.05 /
+&DEVC ID='W_X_13', QUANTITY='W-VELOCITY', XYZ=0.041667,0.05,0.05 /
+&DEVC ID='W_X_14', QUANTITY='W-VELOCITY', XYZ=0.045000,0.05,0.05 /
+&DEVC ID='W_X_15', QUANTITY='W-VELOCITY', XYZ=0.048333,0.05,0.05 /
+&DEVC ID='W_X_16', QUANTITY='W-VELOCITY', XYZ=0.051667,0.05,0.05 /
+&DEVC ID='W_X_17', QUANTITY='W-VELOCITY', XYZ=0.055000,0.05,0.05 /
+&DEVC ID='W_X_18', QUANTITY='W-VELOCITY', XYZ=0.058333,0.05,0.05 /
+&DEVC ID='W_X_19', QUANTITY='W-VELOCITY', XYZ=0.061667,0.05,0.05 /
+&DEVC ID='W_X_20', QUANTITY='W-VELOCITY', XYZ=0.065000,0.05,0.05 /
+&DEVC ID='W_X_21', QUANTITY='W-VELOCITY', XYZ=0.068333,0.05,0.05 /
+&DEVC ID='W_X_22', QUANTITY='W-VELOCITY', XYZ=0.071667,0.05,0.05 /
+&DEVC ID='W_X_23', QUANTITY='W-VELOCITY', XYZ=0.075000,0.05,0.05 /
+&DEVC ID='W_X_24', QUANTITY='W-VELOCITY', XYZ=0.078333,0.05,0.05 /
+&DEVC ID='W_X_25', QUANTITY='W-VELOCITY', XYZ=0.081667,0.05,0.05 /
+&DEVC ID='W_X_26', QUANTITY='W-VELOCITY', XYZ=0.085000,0.05,0.05 /
+&DEVC ID='W_X_27', QUANTITY='W-VELOCITY', XYZ=0.088333,0.05,0.05 /
+&DEVC ID='W_X_28', QUANTITY='W-VELOCITY', XYZ=0.091667,0.05,0.05 /
+&DEVC ID='W_X_29', QUANTITY='W-VELOCITY', XYZ=0.095000,0.05,0.05 /
+&DEVC ID='W_X_30', QUANTITY='W-VELOCITY', XYZ=0.098333,0.05,0.05 /
+! ------------------------------------------------------------
+&BNDF QUANTITY='CONVECTIVE HEAT FLUX' /
+
+
+! End
+! ------------------------------------------------------------
+&TAIL /

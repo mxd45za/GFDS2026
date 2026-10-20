@@ -8,24 +8,22 @@ assignees: ''
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is. If you just have a question about using FDS use the discussion page (https://github.com/firemodels/fds/discussions).
+A clear description of the problem. Use [GFDS Discussions](https://github.com/mxd45za/GFDS/discussions) for general questions.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Input and command**
+Attach the input file and list the exact build and run commands.
+
+**Environment**
+List the GFDS version or commit, compiler, CUDA, MPI, operating system, CPU, and GPU.
+
+**Observed behavior**
+Include the complete error output and relevant result files.
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+Describe the expected result.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Version: [e.g. 22]
+**CPU comparison**
+State whether the same input was tested in CPU mode and give the result.
 
 **Additional context**
-Add any other context about the problem here.
+Add any other information needed to reproduce the problem. Remove confidential or restricted material before uploading files.

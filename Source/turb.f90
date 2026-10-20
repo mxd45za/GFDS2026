@@ -9,7 +9,7 @@ USE MESH_POINTERS
 USE MESH_VARIABLES
 USE COMP_FUNCTIONS
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 PRIVATE
 
 PUBLIC :: INIT_TURB_ARRAYS, VARDEN_DYNSMAG, &
@@ -3355,7 +3355,7 @@ MODULE MANUFACTURED_SOLUTIONS
 
 USE PRECISION_PARAMETERS
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 ! L. Shunn, F. Ham, P. Moin. Verification of variable-density flow solvers using manufactured solutions.
 !    Journal of Computational Physics 231 (2012) 3801-3827. (below is the code for Shunn Problem 3)

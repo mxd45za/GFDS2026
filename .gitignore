@@ -104,3 +104,30 @@ Verification/Timing_Benchmarks/t*.fds
 CMakeUserPresets.json
 Build/cmakeb/
 .vscode/
+
+# GFDS local CMake build outputs
+/Build/gfds-*/
+/*build*/
+/RESULT/
+/*Plan*/
+/run*/
+/Develop-Plan/
+/test/
+/build/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/Makefile
+**/Makefile2
+**/compile_commands.json
+*.csv
+/.gfdstools/
+*.png
+*.pickle
+*.ini
+*.py
+*.pyc
+__pycache__/
+
+# Keep PNG figures from case results
+!/case/**/*.png

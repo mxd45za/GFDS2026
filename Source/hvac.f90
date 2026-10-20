@@ -14,7 +14,7 @@ USE CONTROL_VARIABLES
 USE COMP_FUNCTIONS, ONLY: CURRENT_TIME, CHECKREAD, SHUTDOWN
 USE MEMORY_FUNCTIONS, ONLY: ChkMemErr
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 PRIVATE
 
@@ -1138,7 +1138,7 @@ INTEGER :: NN,NN3,ND
 LOGICAL :: NODE_CHECKED(N_DUCTNODES),NODE_CONNECTED(N_DUCTNODES)
 TYPE(DUCT_TYPE), POINTER :: DU
 TYPE(DUCTNODE_TYPE), POINTER :: DN
-
+integer :: i
 NODE_CONNECTED=.FALSE.
 NODE_CHECKED=.FALSE.
 
@@ -1186,7 +1186,16 @@ L1:DO WHILE (NN <= N_DUCTNODES)
          ! If there are no nodes part of the current network that haven't been checked, up the network and move to first unchecked
          N_CONNECTIVITY_INDICES = N_CONNECTIVITY_INDICES + 1
          NODE_CONNECTED = .FALSE.
-         NN = FINDLOC(NODE_CHECKED,.FALSE.,1)
+
+      ! 手动查找第一个未检查的节点
+      NN = -1  ! 初始化为 -1，表示未找到
+      DO i = 1, N_DUCTNODES
+         IF (.NOT. NODE_CHECKED(i)) THEN
+            NN = i
+            EXIT  ! 找到第一个未检查的节点，退出循环
+         END IF
+      END DO
+
          EXIT L2
       END IF
    END DO L2
@@ -4024,7 +4033,7 @@ LOGICAL :: NODE_CHECKED(N_DUCTNODES),NODE_CONNECTED(N_DUCTNODES),DUCT_FOUND,FAN_
 REAL(EB) :: C0,ZZ_GET(1:N_TRACKED_SPECIES)
 TYPE(DUCT_TYPE), POINTER :: DU
 TYPE(DUCTNODE_TYPE), POINTER :: DN
-
+integer :: i
 IF (.NOT. CHANGE .AND. ALLOCATED(DUCTRUN)) RETURN
 IF (ALLOCATED(DUCTRUN)) DEALLOCATE(DUCTRUN)
 
@@ -4101,7 +4110,15 @@ L1:DO WHILE (NN <= N_DUCTNODES)
          ! If there are no nodes part of the current network that haven't been checked, up the network and move to first unchecked
          N_DUCTRUNS = N_DUCTRUNS + 1
          NODE_CONNECTED = .FALSE.
-         NN = FINDLOC(NODE_CHECKED,.FALSE.,1)
+
+      ! 手动查找第一个未检查的节点
+      NN = -1  ! 初始化为 -1，表示未找到
+      DO i = 1, N_DUCTNODES
+         IF (.NOT. NODE_CHECKED(i)) THEN
+            NN = i
+            EXIT  ! 找到第一个未检查的节点，退出循环
+         END IF
+      END DO
          EXIT L2
       END IF
    END DO L2

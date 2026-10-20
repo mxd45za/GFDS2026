@@ -2,11 +2,16 @@
 
 MODULE PRECISION_PARAMETERS
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 INTEGER, PARAMETER :: FB = SELECTED_REAL_KIND(6)     !< Precision of "Four Byte" reals
+#ifdef GFDS_SINGLE_PRECISION
+INTEGER, PARAMETER :: EB = SELECTED_REAL_KIND(6)
+INTEGER, PARAMETER :: QB = SELECTED_REAL_KIND(6)
+#else
 INTEGER, PARAMETER :: EB = SELECTED_REAL_KIND(12)    !< Precision of "Eight Byte" reals
-INTEGER, PARAMETER :: QB = SELECTED_REAL_KIND(33,4931) !< Precision of "Sixteen Byte" reals
+INTEGER, PARAMETER :: QB = SELECTED_REAL_KIND(12)    !< Precision of "Sixteen Byte" reals
+#endif
 INTEGER, PARAMETER :: MAX_LPC=20                     !< Maximum number of declared particle classes
 INTEGER, PARAMETER :: MAX_SPECIES=20                 !< Maximum number of declared species
 INTEGER, PARAMETER :: MAX_LAYERS=20                  !< Maximum number of solid material layers

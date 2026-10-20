@@ -19,7 +19,7 @@ USE HYPRE_INTERFACE, ONLY : HYPRE_ZM_TYPE
 ! USE HYPRE_INTERFACE, ONLY : HYPRE_ZS_TYPE
 #endif
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 !> \brief Arrays to hold derived type (WALL, CFACE, or PARTICLE) components for I/O or MPI exchanges
 
@@ -259,13 +259,6 @@ END TYPE BOUNDARY_ONE_D_TYPE
 
 !> \brief Variables associated with a WALL boundary cell that allows 3D heat transfer
 
-TYPE BOUNDARY_THR_D_TYPE
-
-   TYPE(INTERNAL_NODE_TYPE), ALLOCATABLE, DIMENSION(:) :: NODE  !< Index of the interior solid cell
-
-END TYPE BOUNDARY_THR_D_TYPE
-
-
 TYPE INTERNAL_NODE_TYPE
    INTEGER, ALLOCATABLE, DIMENSION(:) :: ALTERNATE_WALL_INDEX   !< Index of WALL cell in one of the two alternate directions
    INTEGER, ALLOCATABLE, DIMENSION(:) :: ALTERNATE_WALL_NODE    !< Interior node of alternate WALL cell
@@ -280,6 +273,13 @@ TYPE INTERNAL_NODE_TYPE
    INTEGER :: MESH_NUMBER=-1                                    !< MESH number of the node
    LOGICAL :: HT3D=.TRUE.                                       !< Indicates that this cell is meant to be updated in 3D
 END TYPE INTERNAL_NODE_TYPE
+
+! NVFORTRAN requires the referenced derived type to be declared first.
+TYPE BOUNDARY_THR_D_TYPE
+
+   TYPE(INTERNAL_NODE_TYPE), ALLOCATABLE, DIMENSION(:) :: NODE  !< Index of the interior solid cell
+
+END TYPE BOUNDARY_THR_D_TYPE
 
 
 TYPE BOUNDARY_PROP1_TYPE

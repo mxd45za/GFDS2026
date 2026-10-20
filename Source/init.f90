@@ -10,7 +10,7 @@ USE TRAN
 USE MEMORY_FUNCTIONS, ONLY : CHKMEMERR
 USE DEVICE_VARIABLES
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 PRIVATE
 
@@ -28,7 +28,7 @@ CONTAINS
 SUBROUTINE INITIALIZE_WALL_ARRAY(NM)
 
 INTEGER, INTENT(IN) :: NM
-INTEGER :: I,J,K,IW,IC,SURF_INDEX,IOR,IERR,IZERO,OBST_INDEX
+INTEGER :: I,J,K,IW,IC,ICN,SURF_INDEX,IOR,IERR,IZERO,OBST_INDEX,N_WALL_CELLS_EST
 TYPE (OBSTRUCTION_TYPE), POINTER :: OB
 TYPE (MESH_TYPE), POINTER :: M
 
@@ -41,7 +41,44 @@ CALL ChkMemErr('INIT','EXTERNAL_WALL',IZERO)
 
 ! Dimensions that will grow as needed
 
-M%N_WALL_CELLS_DIM      = M%N_EXTERNAL_WALL_CELLS
+! FDS 6.11.1 WALL allocation repair: account for solid-adjacent gas cells before allocation.
+N_WALL_CELLS_EST = M%N_EXTERNAL_WALL_CELLS
+IF (ALLOCATED(M%CELL)) THEN
+   DO K=1,M%KBAR
+      DO J=1,M%JBAR
+         DO I=1,M%IBAR
+            IC = M%CELL_INDEX(I,J,K)
+            IF (M%CELL(IC)%SOLID) CYCLE
+            IF (I>1) THEN
+               ICN = M%CELL_INDEX(I-1,J,K)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+            IF (I<M%IBAR) THEN
+               ICN = M%CELL_INDEX(I+1,J,K)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+            IF (J>1) THEN
+               ICN = M%CELL_INDEX(I,J-1,K)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+            IF (J<M%JBAR) THEN
+               ICN = M%CELL_INDEX(I,J+1,K)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+            IF (K>1) THEN
+               ICN = M%CELL_INDEX(I,J,K-1)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+            IF (K<M%KBAR) THEN
+               ICN = M%CELL_INDEX(I,J,K+1)
+               IF (M%CELL(ICN)%SOLID) N_WALL_CELLS_EST = N_WALL_CELLS_EST + 1
+            ENDIF
+         ENDDO
+      ENDDO
+   ENDDO
+ENDIF
+
+M%N_WALL_CELLS_DIM      = MAX(M%N_EXTERNAL_WALL_CELLS,N_WALL_CELLS_EST+1000)
 M%N_THIN_WALL_CELLS_DIM = 10
 
 ! Allocate WALL and THIN_WALL derived type variables. These will grow as needed.
@@ -1011,7 +1048,6 @@ YF = M%YF
 ZF = M%ZF
 
 ! Surface work arrays
-
 ALLOCATE(M%WALL_WORK1(M%N_WALL_CELLS),STAT=IZERO)
 CALL ChkMemErr('INIT','WALL_WORK1',IZERO)
 ALLOCATE(M%WALL_WORK2(M%N_WALL_CELLS),STAT=IZERO)

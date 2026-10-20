@@ -8,13 +8,13 @@ assignees: ''
 ---
 
 **Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]. If you just have a question about using FDS use the discussion page (https://github.com/firemodels/fds/discussions).
+Describe the problem or calculation need. Use [GFDS Discussions](https://github.com/mxd45za/GFDS/discussions) for general questions.
 
 **Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+Describe the requested behavior and the FDS input features involved.
 
 **Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+Describe any current workaround or alternative approach.
 
 **Additional context**
 Add any other context or screenshots about the feature request here.

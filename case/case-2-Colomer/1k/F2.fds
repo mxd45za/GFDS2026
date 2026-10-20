@@ -1,0 +1,94 @@
+Colomer et al. Fig. 3: three-dimensional radiation in a rectangular furnace
+===========================================================================
+
+This is the no-source-code-change baseline for the rectangular-furnace
+radiation case in Colomer et al. (2004), Int. J. Heat Mass Transfer 47,
+257-269. The reference problem neglects convection and gas conduction.
+FREEZE_VELOCITY removes convection here; gas conduction remains in FDS.
+
+&HEAD CHID='F2', TITLE='Colomer Fig. 3 rectangular furnace radiation baseline' /
+
+! 2 m x 2 m x 4 m domain with 0.05 m uniform cells.
+&MESH ID='FURNACE', IJK=40,40,80, XB=0.0,2.0,0.0,2.0,0.0,4.0 /
+
+! Use a sufficiently long transient and assess steady state from the final DEVC records.
+&TIME T_END=200.0 /
+&DUMP DT_DEVC=2.0, DT_SLCF=10.0, DT_HRR=2.0, NFRAMES=1000 /
+
+! TMPA is the initial gas temperature (C), not a wall boundary condition.
+! FREEZE_VELOCITY holds U, V, and W at their initialized zero values.
+&MISC TMPA=626.85, GVEC=0.0,0.0,0.0, NOISE=.FALSE. /
+
+! Constant gray-gas absorption coefficient: kappa = 1.0 1/m.
+&RADI RADIATION=.TRUE., KAPPA0=1.0, NUMBER_RADIATION_ANGLES=200, TIME_STEP_INCREMENT=1 /
+
+! Fixed wall temperatures are converted from K to FDS input units of C.
+&SURF ID='WALL_1200K', TMP_FRONT=926.85, EMISSIVITY=0.85, HEAT_TRANSFER_COEFFICIENT=0.0, COLOR='RED' /
+&SURF ID='WALL_900K',  TMP_FRONT=626.85, EMISSIVITY=0.70, HEAT_TRANSFER_COEFFICIENT=0.0, COLOR='GRAY 50' /
+&SURF ID='WALL_400K',  TMP_FRONT=126.85, EMISSIVITY=0.70, HEAT_TRANSFER_COEFFICIENT=0.0, COLOR='BLUE' /
+
+! z=0 and z=4 are the two 2 m x 2 m end walls; the other four walls are 900 K.
+&VENT ID='Z0_HOT',    XB=0.0,2.0,0.0,2.0,0.0,0.0, SURF_ID='WALL_1200K' /
+&VENT ID='Z4_COLD',   XB=0.0,2.0,0.0,2.0,4.0,4.0, SURF_ID='WALL_400K' /
+&VENT ID='X0_SIDE',   XB=0.0,0.0,0.0,2.0,0.0,4.0, SURF_ID='WALL_900K' /
+&VENT ID='X2_SIDE',   XB=2.0,2.0,0.0,2.0,0.0,4.0, SURF_ID='WALL_900K' /
+&VENT ID='Y0_SIDE',   XB=0.0,2.0,0.0,0.0,0.0,4.0, SURF_ID='WALL_900K' /
+&VENT ID='Y2_SIDE',   XB=0.0,2.0,2.0,2.0,0.0,4.0, SURF_ID='WALL_900K' /
+
+! Uniform nonreacting volumetric source: S = 5 kW/m3 over 16 m3, or 80 kW total.
+! No REAC line is defined. RADIATIVE_FRACTION=0 prevents a direct combustion-radiation source.
+&INIT ID='UNIFORM_SOURCE', XB=0.0,2.0,0.0,2.0,0.0,4.0,
+      HRRPUV=5.0, RADIATIVE_FRACTION=0.0 /
+
+! Mid-length temperature field for a visual three-dimensional radiation check.
+&SLCF ID='T_Z2', QUANTITY='TEMPERATURE', PBZ=2.0 /
+
+! Fig. 3 centerline: T(x) at y=1 m and z=2 m.
+! FDS reports TEMPERATURE in C; add 273.15 before comparison with the reference in K.
+&DEVC ID='T_X_001', QUANTITY='TEMPERATURE', XYZ=0.025,1.0,2.0 /
+&DEVC ID='T_X_002', QUANTITY='TEMPERATURE', XYZ=0.075,1.0,2.0 /
+&DEVC ID='T_X_003', QUANTITY='TEMPERATURE', XYZ=0.125,1.0,2.0 /
+&DEVC ID='T_X_004', QUANTITY='TEMPERATURE', XYZ=0.175,1.0,2.0 /
+&DEVC ID='T_X_005', QUANTITY='TEMPERATURE', XYZ=0.225,1.0,2.0 /
+&DEVC ID='T_X_006', QUANTITY='TEMPERATURE', XYZ=0.275,1.0,2.0 /
+&DEVC ID='T_X_007', QUANTITY='TEMPERATURE', XYZ=0.325,1.0,2.0 /
+&DEVC ID='T_X_008', QUANTITY='TEMPERATURE', XYZ=0.375,1.0,2.0 /
+&DEVC ID='T_X_009', QUANTITY='TEMPERATURE', XYZ=0.425,1.0,2.0 /
+&DEVC ID='T_X_010', QUANTITY='TEMPERATURE', XYZ=0.475,1.0,2.0 /
+&DEVC ID='T_X_011', QUANTITY='TEMPERATURE', XYZ=0.525,1.0,2.0 /
+&DEVC ID='T_X_012', QUANTITY='TEMPERATURE', XYZ=0.575,1.0,2.0 /
+&DEVC ID='T_X_013', QUANTITY='TEMPERATURE', XYZ=0.625,1.0,2.0 /
+&DEVC ID='T_X_014', QUANTITY='TEMPERATURE', XYZ=0.675,1.0,2.0 /
+&DEVC ID='T_X_015', QUANTITY='TEMPERATURE', XYZ=0.725,1.0,2.0 /
+&DEVC ID='T_X_016', QUANTITY='TEMPERATURE', XYZ=0.775,1.0,2.0 /
+&DEVC ID='T_X_017', QUANTITY='TEMPERATURE', XYZ=0.825,1.0,2.0 /
+&DEVC ID='T_X_018', QUANTITY='TEMPERATURE', XYZ=0.875,1.0,2.0 /
+&DEVC ID='T_X_019', QUANTITY='TEMPERATURE', XYZ=0.925,1.0,2.0 /
+&DEVC ID='T_X_020', QUANTITY='TEMPERATURE', XYZ=0.975,1.0,2.0 /
+&DEVC ID='T_X_021', QUANTITY='TEMPERATURE', XYZ=1.025,1.0,2.0 /
+&DEVC ID='T_X_022', QUANTITY='TEMPERATURE', XYZ=1.075,1.0,2.0 /
+&DEVC ID='T_X_023', QUANTITY='TEMPERATURE', XYZ=1.125,1.0,2.0 /
+&DEVC ID='T_X_024', QUANTITY='TEMPERATURE', XYZ=1.175,1.0,2.0 /
+&DEVC ID='T_X_025', QUANTITY='TEMPERATURE', XYZ=1.225,1.0,2.0 /
+&DEVC ID='T_X_026', QUANTITY='TEMPERATURE', XYZ=1.275,1.0,2.0 /
+&DEVC ID='T_X_027', QUANTITY='TEMPERATURE', XYZ=1.325,1.0,2.0 /
+&DEVC ID='T_X_028', QUANTITY='TEMPERATURE', XYZ=1.375,1.0,2.0 /
+&DEVC ID='T_X_029', QUANTITY='TEMPERATURE', XYZ=1.425,1.0,2.0 /
+&DEVC ID='T_X_030', QUANTITY='TEMPERATURE', XYZ=1.475,1.0,2.0 /
+&DEVC ID='T_X_031', QUANTITY='TEMPERATURE', XYZ=1.525,1.0,2.0 /
+&DEVC ID='T_X_032', QUANTITY='TEMPERATURE', XYZ=1.575,1.0,2.0 /
+&DEVC ID='T_X_033', QUANTITY='TEMPERATURE', XYZ=1.625,1.0,2.0 /
+&DEVC ID='T_X_034', QUANTITY='TEMPERATURE', XYZ=1.675,1.0,2.0 /
+&DEVC ID='T_X_035', QUANTITY='TEMPERATURE', XYZ=1.725,1.0,2.0 /
+&DEVC ID='T_X_036', QUANTITY='TEMPERATURE', XYZ=1.775,1.0,2.0 /
+&DEVC ID='T_X_037', QUANTITY='TEMPERATURE', XYZ=1.825,1.0,2.0 /
+&DEVC ID='T_X_038', QUANTITY='TEMPERATURE', XYZ=1.875,1.0,2.0 /
+&DEVC ID='T_X_039', QUANTITY='TEMPERATURE', XYZ=1.925,1.0,2.0 /
+&DEVC ID='T_X_040', QUANTITY='TEMPERATURE', XYZ=1.975,1.0,2.0 /
+
+! Diagnostics only: these must remain zero with FREEZE_VELOCITY enabled.
+&DEVC ID='U_CHECK', QUANTITY='U-VELOCITY', XYZ=1.0,1.0,2.0 /
+&DEVC ID='V_CHECK', QUANTITY='V-VELOCITY', XYZ=1.0,1.0,2.0 /
+&DEVC ID='W_CHECK', QUANTITY='W-VELOCITY', XYZ=1.0,1.0,2.0 /
+
+&TAIL /

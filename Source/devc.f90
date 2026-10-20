@@ -3,7 +3,7 @@
 MODULE DEVICE_VARIABLES
 
 USE PRECISION_PARAMETERS
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 INTEGER, ALLOCATABLE, DIMENSION(:) :: DEVC_PIPE_OPERATING
 
@@ -47,6 +47,7 @@ TYPE SUBDEVICE_TYPE
    !> !\}
    INTEGER :: N_PATH=0 !< Number of grid cells along subdevice path for TRANSMISSION or PATH OBSCURATION
    INTEGER :: N_VALUES=0 !< Number of values for the subdevice used for computing spatial statistics
+   LOGICAL :: GPU_VALUE_READY=.FALSE. !< Value supplied by the GPU output path for this time step
    !> !\{
    !> Grid index for a grid cell along subdevice path for TRANSMISSION or PATH OBSCURATION
    INTEGER, ALLOCATABLE, DIMENSION(:) :: I_PATH,J_PATH,K_PATH
@@ -133,7 +134,7 @@ MODULE CONTROL_VARIABLES
 
 USE PRECISION_PARAMETERS
 
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 !> !\{
 !> Parameter defining the type of control function for CONTROL\%CONTROL_INDEX

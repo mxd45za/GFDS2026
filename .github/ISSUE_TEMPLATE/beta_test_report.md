@@ -1,21 +1,23 @@
 ---
-name: Beta test report
-about: Report on experience with beta features
+name: GFDS test report
+about: Report results from testing a GFDS feature or case
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Which new feature are you testing?**
-Short description of the new feature, for example, "complex geometry" or "3D heat transfer".
+**Feature or case**
+Identify the GFDS feature or case being tested.
 
-**Name and institution**
-How shall we cite your contribution?
+**Contact (optional)**
+Provide an email address if follow-up is needed.
 
-**Describe your experience**
+**Environment and command**
+List the GFDS version or commit, hardware, software environment, and run command.
 
-What worked well?
+**Results**
+Attach the input file and provide the relevant CPU/GPU comparison, output, or timing data.
 
-What could be improved?
-
+**Comments**
+Describe any problem or suggested improvement.

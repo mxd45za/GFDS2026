@@ -9,7 +9,7 @@ MODULE GLOBAL_CONSTANTS
 USE PRECISION_PARAMETERS
 USE MPI_F08
 USE ISO_FORTRAN_ENV, ONLY: ERROR_UNIT
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 ! constants used by smokeview for drawing surfaces
 
@@ -671,6 +671,9 @@ REAL(EB), ALLOCATABLE, DIMENSION(:) :: T_USED       !< Array of subroutine timin
 REAL(EB) :: WALL_CLOCK_START                        !< MPI_WTIME i.e. wall clock time when FDS starts
 REAL(EB) :: WALL_CLOCK_START_ITERATIONS=0._EB       !< MPI_WTIME i.e. wall clock time when main iteration loop starts
 REAL(EB) :: CPU_TIME_START                          !< CPU_TIME when FDS starts
+REAL(EB) :: MESH_EXCHANGE_WALL_TIME=0._EB           !< Maximum-rank wall time spent in primary mesh exchanges
+REAL(EB) :: GPU_IO_WALL_TIME=0._EB                  !< Maximum-rank wall time spent copying output fields from GPU
+REAL(EB) :: DUMP_WALL_TIME=0._EB                    !< Maximum-rank wall time spent preparing and writing output
 
 INTEGER :: OPENMP_AVAILABLE_THREADS = 1         !< OpenMP parameter
 LOGICAL :: USE_OPENMP               = .FALSE.   !< OpenMP parameter
@@ -776,7 +779,7 @@ END MODULE GLOBAL_CONSTANTS
 MODULE OUTPUT_CLOCKS
 
 USE PRECISION_PARAMETERS
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 INTEGER :: RAMP_BNDF_INDEX=0  !< Ramp index for boundary file time series
 INTEGER :: RAMP_CTRL_INDEX=0  !< Ramp index for control file time series
@@ -826,7 +829,7 @@ END MODULE OUTPUT_CLOCKS
 MODULE RADCONS
 
 USE PRECISION_PARAMETERS
-IMPLICIT NONE (TYPE,EXTERNAL)
+IMPLICIT NONE
 
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: DLN                !< Wall-normal matrix
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: DLANG              !< Angles
@@ -900,4 +903,3 @@ REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: CVODE_SUBSTEP_DATA
 INTEGER :: TOTAL_SUBSTEPS_TAKEN
 
 END MODULE CHEMCONS
-
