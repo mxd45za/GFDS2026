@@ -1,0 +1,2319 @@
+!------------------------------------------------------------------------------
+! Module: G_WALL
+! Purpose: GPU wall boundary conditions and gas-wall heat and mass transfer.
+!------------------------------------------------------------------------------
+MODULE G_WALL
+    USE GLOBAL_CONSTANTS
+    USE MESH_POINTERS
+    USE TYPES, ONLY: WALL_TYPE,BOUNDARY_PROP1_TYPE,BOUNDARY_PROP2_TYPE,SURFACE_TYPE
+    USE G_MESH_POINTERS
+    USE G_HT1D, ONLY: SOLID_HEAT_TRANSFER_GPU
+    USE G_FUNC
+    USE G_ERRO, ONLY: GPU_WAIT
+    USE G_VELO, ONLY: WALL_MODEL_DEVICE,COMPUTE_WALL_MODEL_OUTPUT_GPU
+    IMPLICIT NONE
+
+    ! Device wall fields required by CPU-side output routines.
+    INTEGER, PARAMETER :: WALL_OUTPUT_U_TANG          = 1
+    INTEGER, PARAMETER :: WALL_OUTPUT_TMP_G           = 2
+    INTEGER, PARAMETER :: WALL_OUTPUT_RHO_G           = 4
+    INTEGER, PARAMETER :: WALL_OUTPUT_TMP_F           = 8
+    INTEGER, PARAMETER :: WALL_OUTPUT_RHO_F           = 16
+    INTEGER, PARAMETER :: WALL_OUTPUT_U_NORMAL        = 32
+    INTEGER, PARAMETER :: WALL_OUTPUT_U_NORMAL_S      = 64
+    INTEGER, PARAMETER :: WALL_OUTPUT_K_G             = 128
+    INTEGER, PARAMETER :: WALL_OUTPUT_Q_CON_F         = 256
+    INTEGER, PARAMETER :: WALL_OUTPUT_HEAT_TRANS_COEF = 512
+    INTEGER, PARAMETER :: WALL_OUTPUT_EMISSIVITY      = 1024
+    INTEGER, PARAMETER :: WALL_OUTPUT_Q_RAD_IN        = 2048
+    INTEGER, PARAMETER :: WALL_OUTPUT_Q_RAD_OUT       = 4096
+    INTEGER, PARAMETER :: WALL_OUTPUT_ZZ_F            = 8192
+    INTEGER, PARAMETER :: WALL_OUTPUT_DUNDT           = 16384
+    INTEGER, PARAMETER :: WALL_OUTPUT_RHO_D_F         = 32768
+    INTEGER, PARAMETER :: WALL_OUTPUT_RHO_D_DZDN_F    = 65536
+    INTEGER, PARAMETER :: WALL_OUTPUT_M_DOT_ADJUST    = 131072
+    INTEGER, PARAMETER :: WALL_OUTPUT_M_DOT_ACTUAL    = 262144
+    INTEGER, PARAMETER :: WALL_OUTPUT_U_TAU           = 524288
+    INTEGER, PARAMETER :: WALL_OUTPUT_Y_PLUS          = 1048576
+    CONTAINS
+
+        !--------------------------------------------------------------------------
+        ! Wall-boundary host entry and orchestration
+        !--------------------------------------------------------------------------
+        LOGICAL FUNCTION WALL_HAS_THERMALLY_THICK(NM)
+
+            IMPLICIT NONE
+
+            INTEGER, INTENT(IN) :: NM
+            INTEGER :: IW,N_WALL_TOTAL
+            TYPE(MESH_TYPE), POINTER :: M
+            TYPE(WALL_TYPE), POINTER :: WC
+            TYPE(SURFACE_TYPE), POINTER :: SF
+
+            WALL_HAS_THERMALLY_THICK = .FALSE.
+            M => MESHES(NM)
+            N_WALL_TOTAL = M%N_EXTERNAL_WALL_CELLS + M%N_INTERNAL_WALL_CELLS
+            IF (N_WALL_TOTAL<=0) RETURN
+
+            DO IW=1,N_WALL_TOTAL
+                WC => M%WALL(IW)
+                IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY) CYCLE
+                IF (WC%SURF_INDEX<1 .OR. WC%SURF_INDEX>SIZE(SURFACE)) CYCLE
+                SF => SURFACE(WC%SURF_INDEX)
+                IF (SF%THERMAL_BC_INDEX==THERMALLY_THICK) THEN
+                    WALL_HAS_THERMALLY_THICK = .TRUE.
+                    RETURN
+                ENDIF
+            ENDDO
+
+        END FUNCTION WALL_HAS_THERMALLY_THICK
+
+        SUBROUTINE WALL_SYNC_GPU_STATE_TO_CPU(NM)
+
+            IMPLICIT NONE
+
+            INTEGER, INTENT(IN) :: NM
+            INTEGER :: NOM
+            TYPE(OMESH_TYPE), POINTER :: OM
+            TYPE(GPU_OMESH_TYPE), POINTER :: GOM_LOCAL
+
+            CALL POINT_TO_MESH(NM)
+            GM => GPU_MESHES(NM)
+
+            ! Synchronize predictor/corrector fields and remote values for CPU WALL_BC.
+            CALL GPU_WAIT(GM%STRM)
+
+            U    = GM%UD
+            V    = GM%VD
+            W    = GM%WD
+            US   = GM%USD
+            VS   = GM%VSD
+            WS   = GM%WSD
+            RHO  = GM%RHOD
+            RHOS = GM%RHOSD
+            TMP  = GM%TMPD
+            MU   = GM%MUD
+            RSUM = GM%RSUMD
+            ZZ   = GM%ZZD
+            ZZS  = GM%ZZSD
+            DO NOM=LBOUND(PBAR,2),UBOUND(PBAR,2)
+                PBAR(:,NOM)   = GM%PBARD(:,NOM)
+                PBAR_S(:,NOM) = GM%PBAR_SD(:,NOM)
+            ENDDO
+
+            IF (.NOT.ALLOCATED(GM%OMESH)) RETURN
+            DO NOM=1,SIZE(GM%OMESH)
+                GOM_LOCAL => GM%OMESH(NOM)
+                IF (.NOT.GOM_LOCAL%ACTIVE) CYCLE
+                OM => MESHES(NM)%OMESH(NOM)
+                IF (ALLOCATED(OM%RHO))  OM%RHO  = GOM_LOCAL%RHO_D
+                IF (ALLOCATED(OM%RHOS)) OM%RHOS = GOM_LOCAL%RHOS_D
+                IF (ALLOCATED(OM%ZZ))   OM%ZZ   = GOM_LOCAL%ZZ_D
+                IF (ALLOCATED(OM%ZZS))  OM%ZZS  = GOM_LOCAL%ZZS_D
+                IF (ALLOCATED(OM%MU))   OM%MU   = GOM_LOCAL%MU_D
+            ENDDO
+
+        END SUBROUTINE WALL_SYNC_GPU_STATE_TO_CPU
+
+        SUBROUTINE WALL_SYNC_CPU_STATE_TO_GPU(NM)
+
+            IMPLICIT NONE
+
+            INTEGER, INTENT(IN) :: NM
+            INTEGER :: IW,N,NOM,N_WALL_TOTAL
+            INTEGER, ALLOCATABLE :: WALL_PRESSURE_ZONE_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_HEAT_TRANS_COEF_H(:),WALL_Q_CON_F_H(:),WALL_K_G_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_RHO_G_H(:),WALL_TMP_G_H(:),WALL_TMP_F_H(:),WALL_RHO_F_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_RDN_H(:),WALL_U_NORMAL_H(:),WALL_U_NORMAL_S_H(:),WALL_U_NORMAL_0_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_AREA_H(:),WALL_AREA_ADJUST_H(:),WALL_DUNDT_H(:),WALL_EMISSIVITY_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_Q_RAD_IN_H(:),WALL_Q_RAD_OUT_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_ZZ_F_H(:,:),WALL_RHO_D_F_H(:,:),WALL_RHO_D_DZDN_F_H(:,:)
+            REAL(EB), ALLOCATABLE :: WALL_M_DOT_ADJUST_H(:,:),WALL_M_DOT_ACTUAL_H(:,:)
+            TYPE(WALL_TYPE), POINTER :: WC
+            TYPE(BOUNDARY_PROP1_TYPE), POINTER :: B1
+            TYPE(OMESH_TYPE), POINTER :: OM
+            TYPE(GPU_OMESH_TYPE), POINTER :: GOM_LOCAL
+
+            CALL POINT_TO_MESH(NM)
+            GM => GPU_MESHES(NM)
+
+            ! Return the complete predictor/corrector state after CPU WALL_BC.
+            GM%UD    = U
+            GM%VD    = V
+            GM%WD    = W
+            GM%USD   = US
+            GM%VSD   = VS
+            GM%WSD   = WS
+            GM%RHOD  = RHO
+            GM%RHOSD = RHOS
+            GM%TMPD  = TMP
+            GM%MUD   = MU
+            GM%RSUMD = RSUM
+            GM%ZZD   = ZZ
+            GM%ZZSD  = ZZS
+            DO N=LBOUND(PBAR,2),UBOUND(PBAR,2)
+                GM%PBARD(:,N)   = PBAR(:,N)
+                GM%PBAR_SD(:,N) = PBAR_S(:,N)
+            ENDDO
+
+            IF (ALLOCATED(GM%OMESH)) THEN
+                DO NOM=1,SIZE(GM%OMESH)
+                    GOM_LOCAL => GM%OMESH(NOM)
+                    IF (.NOT.GOM_LOCAL%ACTIVE) CYCLE
+                    OM => MESHES(NM)%OMESH(NOM)
+                    IF (ALLOCATED(OM%RHO))  GOM_LOCAL%RHO_D  = OM%RHO
+                    IF (ALLOCATED(OM%RHOS)) GOM_LOCAL%RHOS_D = OM%RHOS
+                    IF (ALLOCATED(OM%ZZ))   GOM_LOCAL%ZZ_D   = OM%ZZ
+                    IF (ALLOCATED(OM%ZZS))  GOM_LOCAL%ZZS_D  = OM%ZZS
+                    IF (ALLOCATED(OM%MU))   GOM_LOCAL%MU_D   = OM%MU
+                ENDDO
+            ENDIF
+
+            N_WALL_TOTAL = N_EXTERNAL_WALL_CELLS + N_INTERNAL_WALL_CELLS
+            IF (N_WALL_TOTAL<=0) RETURN
+
+            ALLOCATE(WALL_PRESSURE_ZONE_H(GM%WALL_LB:GM%WALL_UB))
+            ALLOCATE(WALL_HEAT_TRANS_COEF_H(GM%WALL_LB:GM%WALL_UB),WALL_Q_CON_F_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_K_G_H(GM%WALL_LB:GM%WALL_UB),WALL_RHO_G_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_TMP_G_H(GM%WALL_LB:GM%WALL_UB),WALL_TMP_F_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_RHO_F_H(GM%WALL_LB:GM%WALL_UB),WALL_RDN_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_U_NORMAL_H(GM%WALL_LB:GM%WALL_UB),WALL_U_NORMAL_S_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_U_NORMAL_0_H(GM%WALL_LB:GM%WALL_UB),WALL_AREA_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_AREA_ADJUST_H(GM%WALL_LB:GM%WALL_UB),WALL_DUNDT_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_EMISSIVITY_H(GM%WALL_LB:GM%WALL_UB),WALL_Q_RAD_IN_H(GM%WALL_LB:GM%WALL_UB), &
+                     WALL_Q_RAD_OUT_H(GM%WALL_LB:GM%WALL_UB))
+            ALLOCATE(WALL_ZZ_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TOTAL_SCALARS), &
+                     WALL_RHO_D_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES), &
+                     WALL_RHO_D_DZDN_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES), &
+                     WALL_M_DOT_ADJUST_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES), &
+                     WALL_M_DOT_ACTUAL_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+
+            WALL_PRESSURE_ZONE_H = 0
+            WALL_HEAT_TRANS_COEF_H = 0._EB
+            WALL_Q_CON_F_H = 0._EB
+            WALL_K_G_H = 0._EB
+            WALL_RHO_G_H = 0._EB
+            WALL_TMP_G_H = 0._EB
+            WALL_TMP_F_H = 0._EB
+            WALL_RHO_F_H = 0._EB
+            WALL_RDN_H = 0._EB
+            WALL_U_NORMAL_H = 0._EB
+            WALL_U_NORMAL_S_H = 0._EB
+            WALL_U_NORMAL_0_H = 0._EB
+            WALL_AREA_H = 0._EB
+            WALL_AREA_ADJUST_H = 1._EB
+            WALL_DUNDT_H = 0._EB
+            WALL_EMISSIVITY_H = 0._EB
+            WALL_Q_RAD_IN_H = 0._EB
+            WALL_Q_RAD_OUT_H = 0._EB
+            WALL_ZZ_F_H = 0._EB
+            WALL_RHO_D_F_H = 0._EB
+            WALL_RHO_D_DZDN_F_H = 0._EB
+            WALL_M_DOT_ADJUST_H = 0._EB
+            WALL_M_DOT_ACTUAL_H = 0._EB
+            IF (N_TOTAL_SCALARS>=1) WALL_ZZ_F_H(:,1) = 1._EB
+
+            DO IW=1,N_WALL_TOTAL
+                WC => WALL(IW)
+                IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY .OR. WC%B1_INDEX<=0) CYCLE
+                B1 => BOUNDARY_PROP1(WC%B1_INDEX)
+                WALL_PRESSURE_ZONE_H(IW) = B1%PRESSURE_ZONE
+                WALL_HEAT_TRANS_COEF_H(IW) = B1%HEAT_TRANS_COEF
+                WALL_Q_CON_F_H(IW) = B1%Q_CON_F
+                WALL_K_G_H(IW) = B1%K_G
+                WALL_RHO_G_H(IW) = B1%RHO_G
+                WALL_TMP_G_H(IW) = B1%TMP_G
+                WALL_TMP_F_H(IW) = B1%TMP_F
+                WALL_RHO_F_H(IW) = B1%RHO_F
+                WALL_RDN_H(IW) = B1%RDN
+                WALL_U_NORMAL_H(IW) = B1%U_NORMAL
+                WALL_U_NORMAL_S_H(IW) = B1%U_NORMAL_S
+                WALL_U_NORMAL_0_H(IW) = B1%U_NORMAL_0
+                WALL_AREA_H(IW) = B1%AREA
+                WALL_AREA_ADJUST_H(IW) = B1%AREA_ADJUST
+                WALL_EMISSIVITY_H(IW) = B1%EMISSIVITY
+                WALL_Q_RAD_IN_H(IW) = B1%Q_RAD_IN
+                WALL_Q_RAD_OUT_H(IW) = B1%Q_RAD_OUT
+                IF (IW<=N_EXTERNAL_WALL_CELLS) WALL_DUNDT_H(IW) = EXTERNAL_WALL(IW)%DUNDT
+                IF (ALLOCATED(B1%ZZ_F)) WALL_ZZ_F_H(IW,1:N_TOTAL_SCALARS) = B1%ZZ_F(1:N_TOTAL_SCALARS)
+                IF (ALLOCATED(B1%RHO_D_F)) WALL_RHO_D_F_H(IW,1:N_TRACKED_SPECIES) = B1%RHO_D_F(1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(B1%RHO_D_DZDN_F)) WALL_RHO_D_DZDN_F_H(IW,1:N_TRACKED_SPECIES) = &
+                    B1%RHO_D_DZDN_F(1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(B1%M_DOT_G_PP_ADJUST)) WALL_M_DOT_ADJUST_H(IW,1:N_TRACKED_SPECIES) = &
+                    B1%M_DOT_G_PP_ADJUST(1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(B1%M_DOT_G_PP_ACTUAL)) WALL_M_DOT_ACTUAL_H(IW,1:N_TRACKED_SPECIES) = &
+                    B1%M_DOT_G_PP_ACTUAL(1:N_TRACKED_SPECIES)
+            ENDDO
+
+            GM%WALL_PRESSURE_ZONE = WALL_PRESSURE_ZONE_H
+            GM%WALL_HEAT_TRANS_COEF = WALL_HEAT_TRANS_COEF_H
+            GM%WALL_Q_CON_F = WALL_Q_CON_F_H
+            GM%WALL_K_G = WALL_K_G_H
+            GM%WALL_RHO_G = WALL_RHO_G_H
+            GM%WALL_TMP_G = WALL_TMP_G_H
+            GM%WALL_TMP_F = WALL_TMP_F_H
+            GM%WALL_RHO_F = WALL_RHO_F_H
+            GM%WALL_RDN = WALL_RDN_H
+            GM%WALL_U_NORMAL = WALL_U_NORMAL_H
+            GM%WALL_U_NORMAL_S = WALL_U_NORMAL_S_H
+            GM%WALL_U_NORMAL_0 = WALL_U_NORMAL_0_H
+            GM%WALL_AREA = WALL_AREA_H
+            GM%WALL_AREA_ADJUST = WALL_AREA_ADJUST_H
+            GM%WALL_DUNDTD = WALL_DUNDT_H
+            GM%WALL_EMISSIVITY = WALL_EMISSIVITY_H
+            GM%WALL_Q_RAD_IN = WALL_Q_RAD_IN_H
+            GM%WALL_Q_RAD_OUT = WALL_Q_RAD_OUT_H
+            DO N=1,N_TOTAL_SCALARS
+                GM%WALL_ZZ_F(:,N) = WALL_ZZ_F_H(:,N)
+            ENDDO
+            DO N=1,N_TRACKED_SPECIES
+                GM%WALL_RHO_D_F(:,N) = WALL_RHO_D_F_H(:,N)
+                GM%WALL_RHO_D_DZDN_F(:,N) = WALL_RHO_D_DZDN_F_H(:,N)
+                GM%WALL_M_DOT_G_PP_ADJUST(:,N) = WALL_M_DOT_ADJUST_H(:,N)
+                GM%WALL_M_DOT_G_PP_ACTUAL(:,N) = WALL_M_DOT_ACTUAL_H(:,N)
+            ENDDO
+
+            DEALLOCATE(WALL_PRESSURE_ZONE_H,WALL_HEAT_TRANS_COEF_H,WALL_Q_CON_F_H,WALL_K_G_H,WALL_RHO_G_H, &
+                       WALL_TMP_G_H,WALL_TMP_F_H,WALL_RHO_F_H,WALL_RDN_H,WALL_U_NORMAL_H,WALL_U_NORMAL_S_H, &
+                       WALL_U_NORMAL_0_H,WALL_AREA_H,WALL_AREA_ADJUST_H,WALL_DUNDT_H,WALL_EMISSIVITY_H, &
+                       WALL_Q_RAD_IN_H,WALL_Q_RAD_OUT_H,WALL_ZZ_F_H,WALL_RHO_D_F_H,WALL_RHO_D_DZDN_F_H, &
+                       WALL_M_DOT_ADJUST_H,WALL_M_DOT_ACTUAL_H)
+
+        END SUBROUTINE WALL_SYNC_CPU_STATE_TO_GPU
+
+        SUBROUTINE WALL_SYNC_OUTPUT_D2H(NM,OUTPUT_MASK)
+
+            IMPLICIT NONE
+
+            INTEGER, INTENT(IN) :: NM,OUTPUT_MASK
+            INTEGER :: IW,N_WALL_TOTAL
+            TYPE(WALL_TYPE), POINTER :: WC
+            TYPE(BOUNDARY_PROP1_TYPE), POINTER :: B1
+            TYPE(BOUNDARY_PROP2_TYPE), POINTER :: B2
+            REAL(EB), ALLOCATABLE :: WALL_U_TANG_H(:),WALL_TMP_G_H(:),WALL_RHO_G_H(:),WALL_TMP_F_H(:),WALL_RHO_F_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_U_NORMAL_H(:),WALL_U_NORMAL_S_H(:),WALL_K_G_H(:),WALL_Q_CON_F_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_HEAT_TRANS_COEF_H(:),WALL_EMISSIVITY_H(:),WALL_Q_RAD_IN_H(:),WALL_Q_RAD_OUT_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_DUNDT_H(:)
+            REAL(EB), ALLOCATABLE :: WALL_ZZ_F_H(:,:),WALL_RHO_D_F_H(:,:),WALL_RHO_D_DZDN_F_H(:,:)
+            REAL(EB), ALLOCATABLE :: WALL_M_DOT_ADJUST_H(:,:),WALL_M_DOT_ACTUAL_H(:,:)
+            REAL(EB), ALLOCATABLE :: WALL_U_TAU_H(:),WALL_Y_PLUS_H(:)
+
+            CALL POINT_TO_MESH(NM)
+            GM => GPU_MESHES(NM)
+
+            N_WALL_TOTAL = N_EXTERNAL_WALL_CELLS + N_INTERNAL_WALL_CELLS
+            IF (N_WALL_TOTAL<=0 .OR. OUTPUT_MASK==0) RETURN
+
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_U_TAU)/=0 .OR. IAND(OUTPUT_MASK,WALL_OUTPUT_Y_PLUS)/=0) THEN
+                CALL COMPUTE_WALL_MODEL_OUTPUT_GPU(NM)
+                CALL GPU_WAIT(GM%STRM)
+            ENDIF
+
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_U_TANG)/=0) THEN
+                ALLOCATE(WALL_U_TANG_H(GM%WALL_LB:GM%WALL_UB)); WALL_U_TANG_H = GM%WALL_U_TANG
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_TMP_G)/=0) THEN
+                ALLOCATE(WALL_TMP_G_H(GM%WALL_LB:GM%WALL_UB)); WALL_TMP_G_H = GM%WALL_TMP_G
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_RHO_G)/=0) THEN
+                ALLOCATE(WALL_RHO_G_H(GM%WALL_LB:GM%WALL_UB)); WALL_RHO_G_H = GM%WALL_RHO_G
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_TMP_F)/=0) THEN
+                ALLOCATE(WALL_TMP_F_H(GM%WALL_LB:GM%WALL_UB)); WALL_TMP_F_H = GM%WALL_TMP_F
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_RHO_F)/=0) THEN
+                ALLOCATE(WALL_RHO_F_H(GM%WALL_LB:GM%WALL_UB)); WALL_RHO_F_H = GM%WALL_RHO_F
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_U_NORMAL)/=0) THEN
+                ALLOCATE(WALL_U_NORMAL_H(GM%WALL_LB:GM%WALL_UB)); WALL_U_NORMAL_H = GM%WALL_U_NORMAL
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_U_NORMAL_S)/=0) THEN
+                ALLOCATE(WALL_U_NORMAL_S_H(GM%WALL_LB:GM%WALL_UB)); WALL_U_NORMAL_S_H = GM%WALL_U_NORMAL_S
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_K_G)/=0) THEN
+                ALLOCATE(WALL_K_G_H(GM%WALL_LB:GM%WALL_UB)); WALL_K_G_H = GM%WALL_K_G
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_Q_CON_F)/=0) THEN
+                ALLOCATE(WALL_Q_CON_F_H(GM%WALL_LB:GM%WALL_UB)); WALL_Q_CON_F_H = GM%WALL_Q_CON_F
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_HEAT_TRANS_COEF)/=0) THEN
+                ALLOCATE(WALL_HEAT_TRANS_COEF_H(GM%WALL_LB:GM%WALL_UB)); WALL_HEAT_TRANS_COEF_H = GM%WALL_HEAT_TRANS_COEF
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_EMISSIVITY)/=0) THEN
+                ALLOCATE(WALL_EMISSIVITY_H(GM%WALL_LB:GM%WALL_UB)); WALL_EMISSIVITY_H = GM%WALL_EMISSIVITY
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_Q_RAD_IN)/=0) THEN
+                ALLOCATE(WALL_Q_RAD_IN_H(GM%WALL_LB:GM%WALL_UB)); WALL_Q_RAD_IN_H = GM%WALL_Q_RAD_IN
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_Q_RAD_OUT)/=0) THEN
+                ALLOCATE(WALL_Q_RAD_OUT_H(GM%WALL_LB:GM%WALL_UB)); WALL_Q_RAD_OUT_H = GM%WALL_Q_RAD_OUT
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_DUNDT)/=0) THEN
+                ALLOCATE(WALL_DUNDT_H(GM%WALL_LB:GM%WALL_UB)); WALL_DUNDT_H = GM%WALL_DUNDTD
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_ZZ_F)/=0) THEN
+                ALLOCATE(WALL_ZZ_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+                WALL_ZZ_F_H = GM%WALL_ZZ_F(:,1:N_TRACKED_SPECIES)
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_RHO_D_F)/=0) THEN
+                ALLOCATE(WALL_RHO_D_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+                WALL_RHO_D_F_H = GM%WALL_RHO_D_F(:,1:N_TRACKED_SPECIES)
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_RHO_D_DZDN_F)/=0) THEN
+                ALLOCATE(WALL_RHO_D_DZDN_F_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+                WALL_RHO_D_DZDN_F_H = GM%WALL_RHO_D_DZDN_F(:,1:N_TRACKED_SPECIES)
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_M_DOT_ADJUST)/=0) THEN
+                ALLOCATE(WALL_M_DOT_ADJUST_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+                WALL_M_DOT_ADJUST_H = GM%WALL_M_DOT_G_PP_ADJUST(:,1:N_TRACKED_SPECIES)
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_M_DOT_ACTUAL)/=0) THEN
+                ALLOCATE(WALL_M_DOT_ACTUAL_H(GM%WALL_LB:GM%WALL_UB,1:N_TRACKED_SPECIES))
+                WALL_M_DOT_ACTUAL_H = GM%WALL_M_DOT_G_PP_ACTUAL(:,1:N_TRACKED_SPECIES)
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_U_TAU)/=0) THEN
+                ALLOCATE(WALL_U_TAU_H(GM%WALL_LB:GM%WALL_UB)); WALL_U_TAU_H = GM%WALL_U_TAU
+            ENDIF
+            IF (IAND(OUTPUT_MASK,WALL_OUTPUT_Y_PLUS)/=0) THEN
+                ALLOCATE(WALL_Y_PLUS_H(GM%WALL_LB:GM%WALL_UB)); WALL_Y_PLUS_H = GM%WALL_Y_PLUS
+            ENDIF
+
+            DO IW=1,N_WALL_TOTAL
+                WC => WALL(IW)
+                IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY .OR. WC%B1_INDEX<=0) CYCLE
+                B1 => BOUNDARY_PROP1(WC%B1_INDEX)
+                IF (ALLOCATED(WALL_U_TANG_H)) B1%U_TANG = WALL_U_TANG_H(IW)
+                IF (ALLOCATED(WALL_TMP_G_H)) B1%TMP_G = WALL_TMP_G_H(IW)
+                IF (ALLOCATED(WALL_RHO_G_H)) B1%RHO_G = WALL_RHO_G_H(IW)
+                IF (ALLOCATED(WALL_TMP_F_H)) B1%TMP_F = WALL_TMP_F_H(IW)
+                IF (ALLOCATED(WALL_RHO_F_H)) B1%RHO_F = WALL_RHO_F_H(IW)
+                IF (ALLOCATED(WALL_U_NORMAL_H)) B1%U_NORMAL = WALL_U_NORMAL_H(IW)
+                IF (ALLOCATED(WALL_U_NORMAL_S_H)) B1%U_NORMAL_S = WALL_U_NORMAL_S_H(IW)
+                IF (ALLOCATED(WALL_K_G_H)) B1%K_G = WALL_K_G_H(IW)
+                IF (ALLOCATED(WALL_Q_CON_F_H)) B1%Q_CON_F = WALL_Q_CON_F_H(IW)
+                IF (ALLOCATED(WALL_HEAT_TRANS_COEF_H)) B1%HEAT_TRANS_COEF = WALL_HEAT_TRANS_COEF_H(IW)
+                IF (ALLOCATED(WALL_EMISSIVITY_H)) B1%EMISSIVITY = WALL_EMISSIVITY_H(IW)
+                IF (ALLOCATED(WALL_Q_RAD_IN_H)) B1%Q_RAD_IN = WALL_Q_RAD_IN_H(IW)
+                IF (ALLOCATED(WALL_Q_RAD_OUT_H)) B1%Q_RAD_OUT = WALL_Q_RAD_OUT_H(IW)
+                IF (ALLOCATED(WALL_DUNDT_H) .AND. IW<=N_EXTERNAL_WALL_CELLS) EXTERNAL_WALL(IW)%DUNDT = WALL_DUNDT_H(IW)
+                IF (ALLOCATED(WALL_ZZ_F_H) .AND. ALLOCATED(B1%ZZ_F)) &
+                    B1%ZZ_F(1:N_TRACKED_SPECIES) = WALL_ZZ_F_H(IW,1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(WALL_RHO_D_F_H) .AND. ALLOCATED(B1%RHO_D_F)) &
+                    B1%RHO_D_F(1:N_TRACKED_SPECIES) = WALL_RHO_D_F_H(IW,1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(WALL_RHO_D_DZDN_F_H) .AND. ALLOCATED(B1%RHO_D_DZDN_F)) &
+                    B1%RHO_D_DZDN_F(1:N_TRACKED_SPECIES) = WALL_RHO_D_DZDN_F_H(IW,1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(WALL_M_DOT_ADJUST_H) .AND. ALLOCATED(B1%M_DOT_G_PP_ADJUST)) &
+                    B1%M_DOT_G_PP_ADJUST(1:N_TRACKED_SPECIES) = WALL_M_DOT_ADJUST_H(IW,1:N_TRACKED_SPECIES)
+                IF (ALLOCATED(WALL_M_DOT_ACTUAL_H) .AND. ALLOCATED(B1%M_DOT_G_PP_ACTUAL)) &
+                    B1%M_DOT_G_PP_ACTUAL(1:N_TRACKED_SPECIES) = WALL_M_DOT_ACTUAL_H(IW,1:N_TRACKED_SPECIES)
+                IF (WC%B2_INDEX>0) THEN
+                    B2 => BOUNDARY_PROP2(WC%B2_INDEX)
+                    IF (ALLOCATED(WALL_U_TAU_H)) B2%U_TAU = WALL_U_TAU_H(IW)
+                    IF (ALLOCATED(WALL_Y_PLUS_H)) B2%Y_PLUS = WALL_Y_PLUS_H(IW)
+                ENDIF
+            ENDDO
+
+            IF (ALLOCATED(WALL_U_TANG_H)) DEALLOCATE(WALL_U_TANG_H)
+            IF (ALLOCATED(WALL_TMP_G_H)) DEALLOCATE(WALL_TMP_G_H)
+            IF (ALLOCATED(WALL_RHO_G_H)) DEALLOCATE(WALL_RHO_G_H)
+            IF (ALLOCATED(WALL_TMP_F_H)) DEALLOCATE(WALL_TMP_F_H)
+            IF (ALLOCATED(WALL_RHO_F_H)) DEALLOCATE(WALL_RHO_F_H)
+            IF (ALLOCATED(WALL_U_NORMAL_H)) DEALLOCATE(WALL_U_NORMAL_H)
+            IF (ALLOCATED(WALL_U_NORMAL_S_H)) DEALLOCATE(WALL_U_NORMAL_S_H)
+            IF (ALLOCATED(WALL_K_G_H)) DEALLOCATE(WALL_K_G_H)
+            IF (ALLOCATED(WALL_Q_CON_F_H)) DEALLOCATE(WALL_Q_CON_F_H)
+            IF (ALLOCATED(WALL_HEAT_TRANS_COEF_H)) DEALLOCATE(WALL_HEAT_TRANS_COEF_H)
+            IF (ALLOCATED(WALL_EMISSIVITY_H)) DEALLOCATE(WALL_EMISSIVITY_H)
+            IF (ALLOCATED(WALL_Q_RAD_IN_H)) DEALLOCATE(WALL_Q_RAD_IN_H)
+            IF (ALLOCATED(WALL_Q_RAD_OUT_H)) DEALLOCATE(WALL_Q_RAD_OUT_H)
+            IF (ALLOCATED(WALL_DUNDT_H)) DEALLOCATE(WALL_DUNDT_H)
+            IF (ALLOCATED(WALL_ZZ_F_H)) DEALLOCATE(WALL_ZZ_F_H)
+            IF (ALLOCATED(WALL_RHO_D_F_H)) DEALLOCATE(WALL_RHO_D_F_H)
+            IF (ALLOCATED(WALL_RHO_D_DZDN_F_H)) DEALLOCATE(WALL_RHO_D_DZDN_F_H)
+            IF (ALLOCATED(WALL_M_DOT_ADJUST_H)) DEALLOCATE(WALL_M_DOT_ADJUST_H)
+            IF (ALLOCATED(WALL_M_DOT_ACTUAL_H)) DEALLOCATE(WALL_M_DOT_ACTUAL_H)
+            IF (ALLOCATED(WALL_U_TAU_H)) DEALLOCATE(WALL_U_TAU_H)
+            IF (ALLOCATED(WALL_Y_PLUS_H)) DEALLOCATE(WALL_Y_PLUS_H)
+
+        END SUBROUTINE WALL_SYNC_OUTPUT_D2H
+
+        SUBROUTINE WALL_BC_GPU(T,DT,NM)
+
+            USE COMP_FUNCTIONS, ONLY: CURRENT_TIME
+            USE CC_SCALARS, ONLY: CFACE_THERMAL_GASVARS
+            USE TURBULENCE, ONLY: WALL_MODEL
+            IMPLICIT NONE
+
+            REAL(EB) :: TNOW,DT_BC_HT1D
+            REAL(EB), INTENT(IN) :: T,DT
+            INTEGER, INTENT(IN) :: NM
+
+            INTEGER :: IW, N, NOM
+            INTEGER :: BLKD_1D,GRDD_1D,TOTAL_WALL_CELLS
+
+            TYPE(WALL_TYPE), POINTER :: WC
+            TYPE(SURFACE_TYPE), POINTER :: SF
+            TYPE(BOUNDARY_PROP1_TYPE), POINTER :: B1
+
+            REAL(EB), POINTER, DIMENSION(:,:) :: PBAR_P
+            REAL(EB), POINTER, DIMENSION(:,:,:) :: RHOP,HP,UU,VV,WW
+            REAL(EB), POINTER, DIMENSION(:,:,:,:) :: ZZP
+
+            REAL(EB), DEVICE, POINTER, DIMENSION(:,:,:)   :: UUD, VVD, WWD, RHOPD
+            REAL(EB), DEVICE, POINTER, DIMENSION(:,:,:,:) :: ZZPD
+            REAL(EB), DEVICE, POINTER, DIMENSION(:,:)     :: PBAR_PD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:,:) :: OM_RHOPD,OM_MUD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:,:,:) :: OM_ZZPD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:) :: DX_OTHERD,DY_OTHERD,DZ_OTHERD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:) :: RDXN_OTHERD,RDYN_OTHERD,RDZN_OTHERD
+            INTEGER, DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:,:) :: CELL_INDEX_OTHERD
+            LOGICAL, DEVICE, POINTER, CONTIGUOUS, DIMENSION(:) :: CELL_SOLID_OTHERD
+
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:) :: WALL_ZZ_FD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:) :: WALL_RHO_D_FD,WALL_RHO_D_DZDN_FD
+            REAL(EB), DEVICE, POINTER, CONTIGUOUS, DIMENSION(:,:) :: WALL_M_DOT_G_PP_ADJUSTD,WALL_M_DOT_G_PP_ACTUALD
+            REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: WALL_ZZ_G_H
+            REAL(EB), ALLOCATABLE, DIMENSION(:,:) :: WALL_ZZ_F_H, WALL_RHO_D_F_H, WALL_RHO_D_DZDN_F_H, &
+                                                      WALL_M_DOT_G_PP_ADJUST_H, WALL_M_DOT_G_PP_ACTUAL_H
+            REAL(EB), ALLOCATABLE, DIMENSION(:) :: WALL_U_TANG_H, WALL_TMP_G_H, WALL_RHO_G_H, WALL_TMP_F_H, &
+                                                   WALL_HEAT_TRANS_COEF_H, WALL_Q_CON_F_H, WALL_RHO_F_H, &
+                                                   WALL_K_G_H, WALL_U_NORMAL_H, WALL_U_NORMAL_S_H, &
+                                                   WALL_EMISSIVITY_H, WALL_Q_RAD_IN_H, WALL_Q_RAD_OUT_H
+            TYPE(OMESH_TYPE), POINTER :: OM
+            TYPE(GPU_OMESH_TYPE), POINTER :: GOM_LOCAL
+
+            IF (LEVEL_SET_MODE==1) RETURN
+
+            TNOW = CURRENT_TIME()
+
+            CALL POINT_TO_MESH(NM)
+            GM => GPU_MESHES(NM)
+            WALL_ZZ_FD => GM%WALL_ZZ_F
+            WALL_RHO_D_FD => GM%WALL_RHO_D_F
+            WALL_RHO_D_DZDN_FD => GM%WALL_RHO_D_DZDN_F
+            WALL_M_DOT_G_PP_ADJUSTD => GM%WALL_M_DOT_G_PP_ADJUST
+            WALL_M_DOT_G_PP_ACTUALD => GM%WALL_M_DOT_G_PP_ACTUAL
+
+            IF (PREDICTOR) THEN
+                UU => US
+                VV => VS
+                WW => WS
+                RHOP => RHOS
+                ZZP  => ZZS
+                PBAR_P => PBAR_S
+                HP     => HS
+
+                UUD   => GM%USD
+                VVD   => GM%VSD
+                WWD   => GM%WSD
+                RHOPD => GM%RHOSD
+                ZZPD  => GM%ZZSD
+                PBAR_PD => GM%PBAR_SD
+
+            ELSE
+                UU => U
+                VV => V
+                WW => W
+                RHOP => RHO
+                ZZP  => ZZ
+                PBAR_P => PBAR
+                HP     => H
+
+                UUD   => GM%UD
+                VVD   => GM%VD
+                WWD   => GM%WD
+                RHOPD => GM%RHOD
+                ZZPD  => GM%ZZD
+                PBAR_PD => GM%PBARD
+
+            ENDIF
+
+            TOTAL_WALL_CELLS = N_EXTERNAL_WALL_CELLS + N_INTERNAL_WALL_CELLS
+            BLKD_1D = GPU_BLKD_1D
+            GRDD_1D = GM%GRDD_TOTAL_WALL_1D
+            IF (.NOT.ALLOCATED(GM%WALL_ZZ_G_WORKD)) &
+                ALLOCATE(GM%WALL_ZZ_G_WORKD(1:TOTAL_WALL_CELLS,1:N_TRACKED_SPECIES))
+            WALL_ZZ_GD => GM%WALL_ZZ_G_WORKD
+
+            IF (GPU_DEBUG_H2D_D2H) THEN
+                UUD     = UU
+                VVD     = VV
+                WWD     = WW
+                RHOPD   = RHOP
+                GM%RHOD    = RHO
+                ZZPD    = ZZP
+                GM%TMPD    = TMP
+                GM%MUD     = MU
+                DO N=LBOUND(PBAR_P,2),UBOUND(PBAR_P,2)
+                    PBAR_PD(:,N) = PBAR_P(:,N)
+                ENDDO
+                GM%RSUMD   = RSUM
+                DO NOM=1,NMESHES
+                    IF (.NOT.ALLOCATED(GM%OMESH)) EXIT
+                    GOM_LOCAL => GM%OMESH(NOM)
+                    IF (.NOT.GOM_LOCAL%ACTIVE) CYCLE
+                    OM => MESHES(NM)%OMESH(NOM)
+                    IF (PREDICTOR) THEN
+                        IF (ALLOCATED(OM%RHOS)) GOM_LOCAL%RHOS_D = OM%RHOS
+                        IF (ALLOCATED(OM%ZZS))  GOM_LOCAL%ZZS_D = OM%ZZS
+                    ELSE
+                        IF (ALLOCATED(OM%RHO)) GOM_LOCAL%RHO_D = OM%RHO
+                        IF (ALLOCATED(OM%ZZ))  GOM_LOCAL%ZZ_D = OM%ZZ
+                    ENDIF
+                    IF (ALLOCATED(OM%MU)) GOM_LOCAL%MU_D = OM%MU
+                ENDDO
+            ENDIF
+
+            IF (GPU_DEBUG_H2D_D2H) THEN
+                ALLOCATE(WALL_U_TANG_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_TMP_G_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_RHO_G_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_TMP_F_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_HEAT_TRANS_COEF_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_Q_CON_F_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_RHO_F_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_K_G_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_U_NORMAL_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_U_NORMAL_S_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_EMISSIVITY_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_Q_RAD_IN_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_Q_RAD_OUT_H(LBOUND(WALL,1):UBOUND(WALL,1)))
+                ALLOCATE(WALL_ZZ_F_H(LBOUND(WALL,1):UBOUND(WALL,1),1:N_TOTAL_SCALARS))
+                ALLOCATE(WALL_RHO_D_F_H(LBOUND(WALL,1):UBOUND(WALL,1),1:N_TRACKED_SPECIES))
+                ALLOCATE(WALL_RHO_D_DZDN_F_H(LBOUND(WALL,1):UBOUND(WALL,1),1:N_TRACKED_SPECIES))
+                ALLOCATE(WALL_M_DOT_G_PP_ADJUST_H(LBOUND(WALL,1):UBOUND(WALL,1),1:N_TRACKED_SPECIES))
+                ALLOCATE(WALL_M_DOT_G_PP_ACTUAL_H(LBOUND(WALL,1):UBOUND(WALL,1),1:N_TRACKED_SPECIES))
+                WALL_U_TANG_H = 0._EB
+                WALL_TMP_G_H = 0._EB
+                WALL_RHO_G_H = 0._EB
+                WALL_TMP_F_H = 0._EB
+                WALL_HEAT_TRANS_COEF_H = 0._EB
+                WALL_Q_CON_F_H = 0._EB
+                WALL_RHO_F_H = 0._EB
+                WALL_K_G_H = 0._EB
+                WALL_U_NORMAL_H = 0._EB
+                WALL_U_NORMAL_S_H = 0._EB
+                WALL_EMISSIVITY_H = 0._EB
+                WALL_Q_RAD_IN_H = 0._EB
+                WALL_Q_RAD_OUT_H = 0._EB
+                WALL_ZZ_F_H = 0._EB
+                WALL_RHO_D_F_H = 0._EB
+                WALL_RHO_D_DZDN_F_H = 0._EB
+                WALL_M_DOT_G_PP_ADJUST_H = 0._EB
+                WALL_M_DOT_G_PP_ACTUAL_H = 0._EB
+                IF (N_TOTAL_SCALARS >= 1) WALL_ZZ_F_H(:,1) = 1._EB
+                DO IW=1,TOTAL_WALL_CELLS
+                    WC => WALL(IW)
+                    IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY) CYCLE
+                    B1 => BOUNDARY_PROP1(WC%B1_INDEX)
+                    WALL_U_TANG_H(IW) = B1%U_TANG
+                    WALL_TMP_G_H(IW) = B1%TMP_G
+                    WALL_RHO_G_H(IW) = B1%RHO_G
+                    WALL_TMP_F_H(IW) = B1%TMP_F
+                    WALL_HEAT_TRANS_COEF_H(IW) = B1%HEAT_TRANS_COEF
+                    WALL_Q_CON_F_H(IW) = B1%Q_CON_F
+                    WALL_RHO_F_H(IW) = B1%RHO_F
+                    WALL_K_G_H(IW) = B1%K_G
+                    WALL_U_NORMAL_H(IW) = B1%U_NORMAL
+                    WALL_U_NORMAL_S_H(IW) = B1%U_NORMAL_S
+                    WALL_EMISSIVITY_H(IW) = B1%EMISSIVITY
+                    WALL_Q_RAD_IN_H(IW) = B1%Q_RAD_IN
+                    WALL_Q_RAD_OUT_H(IW) = B1%Q_RAD_OUT
+                    IF (ALLOCATED(B1%ZZ_F)) THEN
+                        DO N=1,MIN(N_TOTAL_SCALARS,N_TRACKED_SPECIES)
+                            WALL_ZZ_F_H(IW,N) = B1%ZZ_F(N)
+                        ENDDO
+                    ENDIF
+                    IF (ALLOCATED(B1%RHO_D_F)) WALL_RHO_D_F_H(IW,1:N_TRACKED_SPECIES) = B1%RHO_D_F(1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%RHO_D_DZDN_F)) WALL_RHO_D_DZDN_F_H(IW,1:N_TRACKED_SPECIES) = &
+                        B1%RHO_D_DZDN_F(1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%M_DOT_G_PP_ADJUST)) WALL_M_DOT_G_PP_ADJUST_H(IW,1:N_TRACKED_SPECIES) = &
+                        B1%M_DOT_G_PP_ADJUST(1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%M_DOT_G_PP_ACTUAL)) WALL_M_DOT_G_PP_ACTUAL_H(IW,1:N_TRACKED_SPECIES) = &
+                        B1%M_DOT_G_PP_ACTUAL(1:N_TRACKED_SPECIES)
+                ENDDO
+                GM%WALL_U_TANG = WALL_U_TANG_H
+                GM%WALL_TMP_G = WALL_TMP_G_H
+                GM%WALL_RHO_G = WALL_RHO_G_H
+                GM%WALL_TMP_F = WALL_TMP_F_H
+                GM%WALL_HEAT_TRANS_COEF = WALL_HEAT_TRANS_COEF_H
+                GM%WALL_Q_CON_F = WALL_Q_CON_F_H
+                GM%WALL_RHO_F = WALL_RHO_F_H
+                GM%WALL_K_G = WALL_K_G_H
+                GM%WALL_U_NORMAL = WALL_U_NORMAL_H
+                GM%WALL_U_NORMAL_S = WALL_U_NORMAL_S_H
+                GM%WALL_EMISSIVITY = WALL_EMISSIVITY_H
+                GM%WALL_Q_RAD_IN = WALL_Q_RAD_IN_H
+                GM%WALL_Q_RAD_OUT = WALL_Q_RAD_OUT_H
+                DO N=1,N_TOTAL_SCALARS
+                    GM%WALL_ZZ_F(:,N) = WALL_ZZ_F_H(:,N)
+                ENDDO
+                DO N=1,N_TRACKED_SPECIES
+                    GM%WALL_RHO_D_F(:,N)              = WALL_RHO_D_F_H(:,N)
+                    GM%WALL_RHO_D_DZDN_F(:,N)         = WALL_RHO_D_DZDN_F_H(:,N)
+                    GM%WALL_M_DOT_G_PP_ADJUST(:,N)   = WALL_M_DOT_G_PP_ADJUST_H(:,N)
+                    GM%WALL_M_DOT_G_PP_ACTUAL(:,N)   = WALL_M_DOT_G_PP_ACTUAL_H(:,N)
+                ENDDO
+            ENDIF
+
+            DO NOM=1,NMESHES
+                IF (.NOT.ALLOCATED(GM%OMESH)) EXIT
+                GOM_LOCAL => GM%OMESH(NOM)
+                IF (.NOT.GOM_LOCAL%ACTIVE) CYCLE
+                IF (PREDICTOR) THEN
+                    OM_RHOPD => GOM_LOCAL%RHOS_D
+                    OM_ZZPD => GOM_LOCAL%ZZS_D
+                ELSE
+                    OM_RHOPD => GOM_LOCAL%RHO_D
+                    OM_ZZPD => GOM_LOCAL%ZZ_D
+                ENDIF
+                DX_OTHERD => GPU_MESHES(NOM)%DXD
+                DY_OTHERD => GPU_MESHES(NOM)%DYD
+                DZ_OTHERD => GPU_MESHES(NOM)%DZD
+                CALL ASSIGN_GHOST_VALUE_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(N_EXTERNAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES, &
+                    GM%WALL_TOPO_AOS,GM%WALL_PRESSURE_ZONE,GM%EXTERNAL_WALL_NOMD,GM%WALL_IIO,GM%WALL_JJO,GM%WALL_KKO,GM%WALL_IIO_MAX, &
+                    GM%WALL_JJO_MAX,GM%WALL_KKO_MAX,OM_RHOPD,OM_ZZPD,RHOPD,ZZPD,GM%TMPD,GM%RSUMD,PBAR_PD,MWR_ZD,GM%DXD,GM%DYD,GM%DZD, &
+                    DX_OTHERD,DY_OTHERD,DZ_OTHERD,NOM,LBOUND(OM_RHOPD,1),LBOUND(OM_RHOPD,2),LBOUND(OM_RHOPD,3),R0, &
+                    IBP1,JBP1,KBP1,SIZE(OM_RHOPD,1),SIZE(OM_RHOPD,2),SIZE(OM_RHOPD,3))
+            ENDDO
+
+            CALL NEAR_SURFACE_GAS_VARIABLES_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(UUD, VVD, WWD, RHOPD, GM%TMPD, ZZPD, GM%WALL_TOPO_AOS, GM%WALL_U_TANG, &
+                GM%WALL_TMP_G,GM%WALL_RHO_G,WALL_ZZ_GD,TOTAL_WALL_CELLS,N_TRACKED_SPECIES,IBP1,JBP1,KBP1)
+
+            CALL SURFACE_HEAT_TRANSFER_NO_CONVECTION_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, GM%WALL_TOPO_AOS, GM%WALL_SF_INDEX, &
+                SF_THERMAL_BC_INDEX, GM%WALL_TMP_G, GM%WALL_TMP_F, GM%WALL_EMISSIVITY, GM%WALL_Q_RAD_OUT, MERGE(1,0,RADIATION))
+
+            CALL SURFACE_HEAT_TRANSFER_INFLOW_OUTFLOW_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, GM%WALL_TOPO_AOS, &
+                GM%WALL_SF_INDEX, GM%WALL_PRESSURE_ZONE, UUD, VVD, WWD, GM%WALL_TMP_G, GM%TMP_0D, SF_THERMAL_BC_INDEX, GM%WALL_TMP_F, &
+                GM%WALL_HEAT_TRANS_COEF, GM%WALL_Q_CON_F, GM%WALL_K_G, GM%WALL_RDN, GM%WALL_ZZ_F, WALL_ZZ_GD, SPECIES_ZZ0D, RHOPD, GM%TMPD, &
+                ZZPD,GM%RSUMD,PBAR_PD,MWR_ZD,R0,GM%WALL_EMISSIVITY,GM%WALL_Q_RAD_OUT,MERGE(1,0,RADIATION), &
+                IBP1,JBP1,KBP1,GM%WALL_LB,GM%WALL_UB)
+
+            CALL SURFACE_HEAT_TRANSFER_NET_FLUX_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, GM%WALL_TOPO_AOS, &
+                GM%WALL_SF_INDEX, GM%WALL_RDN, GM%WALL_U_TANG, GM%WALL_TMP_G, GM%WALL_TMP_F, GM%WALL_RHO_G, WALL_ZZ_GD, SF_THERMAL_BC_INDEX, &
+                SF_H_FIXED, SF_CONV_LENGTH, SF_CONVECTIVE_HEAT_FLUX, SF_NET_HEAT_FLUX, SF_RAMP_HEAT_INDEX, &
+                SF_RAMP_HEAT_TAU, GM%WALL_T_IGN, GM%WALL_HEAT_TRANS_COEF, GM%WALL_Q_CON_F, GM%WALL_EMISSIVITY, GM%WALL_Q_RAD_IN, &
+                GM%WALL_Q_RAD_OUT, MU_RSQMW_ZD, K_RSQMW_ZD, RSQ_MW_ZD, RAMP_T_MIN_D, RAMP_SPAN_D, RAMP_RDT_D, RAMP_NPOINTS_D, &
+                RAMP_OFFSET_D,RAMP_INTERP_D,T,T_BEGIN,GRAV,PR_AIR,MERGE(1,0,RADIATION),I_MAX_TEMP)
+
+            CALL SURFACE_HEAT_TRANSFER_SPECIFIED_TEMPERATURE_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, &
+                GM%WALL_TOPO_AOS, GM%WALL_SF_INDEX, GM%WALL_RDN, GM%WALL_U_TANG, GM%WALL_U_NORMAL, GM%WALL_TMP_G, GM%WALL_RHO_G, WALL_ZZ_GD, &
+                SF_TMP_FRONT, SF_H_FIXED, SF_CONV_LENGTH, SF_THERMAL_BC_INDEX, GM%TMP_0D, SF_RAMP_TEMP_INDEX, &
+                SF_RAMP_TEMP_TAU, GM%WALL_T_IGN, GM%WALL_TMP_F, GM%WALL_HEAT_TRANS_COEF, GM%WALL_Q_CON_F, GM%WALL_K_G, GM%WALL_EMISSIVITY, &
+                GM%WALL_Q_RAD_OUT, MU_RSQMW_ZD, K_RSQMW_ZD, RSQ_MW_ZD, RAMP_T_MIN_D, RAMP_SPAN_D, RAMP_RDT_D, RAMP_NPOINTS_D, &
+                RAMP_OFFSET_D,RAMP_INTERP_D,T,T_BEGIN,GRAV,PR_AIR,MERGE(1,0,RADIATION),I_MAX_TEMP)
+            ! CPU WALL_BC advances thermally thick 1-D walls once per
+            ! WALL_INCREMENT on the corrector.  The same interval is assembled
+            ! and solved entirely on the device after the gas-side HTC stage.
+            IF (.NOT.INITIALIZATION_PHASE .AND. CORRECTOR .AND. &
+                WALL_COUNTER==WALL_INCREMENT) THEN
+                DT_BC_HT1D = T-BC_CLOCK
+                IF (DT_BC_HT1D>TWO_EPSILON_EB) THEN
+                    CALL SOLID_HEAT_TRANSFER_GPU(NM,T,DT_BC_HT1D,TMPMIN, TMPMAX,MERGE(1,0,RADIATION))
+                ENDIF
+                BC_CLOCK = T
+            ENDIF
+
+            IF (N_TRACKED_SPECIES > 1) THEN
+            CALL WALL_BC_RHO_D_F_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, GM%WALL_TOPO_AOS, GM%MUD, GM%RHOD, &
+                    GM%WALL_RHO_F,GM%WALL_RHO_G,GM%WALL_RHO_D_F,RSC,NULL_BOUNDARY,OPEN_BOUNDARY,INTERPOLATED_BOUNDARY, &
+                    IBP1,JBP1,GM%WALL_LB,GM%WALL_UB)
+            ENDIF
+
+            DO NOM=1,NMESHES
+                IF (.NOT.ALLOCATED(GM%OMESH)) EXIT
+                GOM_LOCAL => GM%OMESH(NOM)
+                IF (.NOT.GOM_LOCAL%ACTIVE) CYCLE
+                IF (PREDICTOR) THEN
+                    OM_RHOPD => GOM_LOCAL%RHOS_D
+                    OM_ZZPD => GOM_LOCAL%ZZS_D
+                ELSE
+                    OM_RHOPD => GOM_LOCAL%RHO_D
+                    OM_ZZPD => GOM_LOCAL%ZZ_D
+                ENDIF
+                OM_MUD => GOM_LOCAL%MU_D
+                CELL_INDEX_OTHERD => GPU_MESHES(NOM)%CELL_INDEXD
+                CELL_SOLID_OTHERD => GPU_MESHES(NOM)%CELL_SOLID
+                DX_OTHERD => GPU_MESHES(NOM)%DXD
+                DY_OTHERD => GPU_MESHES(NOM)%DYD
+                DZ_OTHERD => GPU_MESHES(NOM)%DZD
+                RDXN_OTHERD => GPU_MESHES(NOM)%RDXND
+                RDYN_OTHERD => GPU_MESHES(NOM)%RDYND
+                RDZN_OTHERD => GPU_MESHES(NOM)%RDZND
+                CALL INTERPOLATED_RHO_F_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(N_EXTERNAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES, &
+                    GM%WALL_TOPO_AOS,GM%WALL_PRESSURE_ZONE,GM%EXTERNAL_WALL_NOMD,GM%WALL_IIO,GM%WALL_JJO,GM%WALL_KKO, &
+                    GM%EXTERNAL_WALL_AREA_RATIOD,UUD,VVD,WWD,RHOPD,ZZPD,OM_RHOPD,OM_ZZPD,GM%WALL_RHO_G,GM%WALL_RHO_F,GM%WALL_ZZ_F, &
+                    GM%WALL_TMP_F,GM%WALL_Q_CON_F,PBAR_PD,GM%DZD,MWR_ZD,GM%CELL_INDEXD,GM%CELL_SOLID,CELL_INDEX_OTHERD,CELL_SOLID_OTHERD, &
+                    INTERPOLATED_BOUNDARY,I_FLUX_LIMITER,NOM,LBOUND(OM_RHOPD,1),LBOUND(OM_RHOPD,2),LBOUND(OM_RHOPD,3), &
+                    TWO_EPSILON_EB,R0,IBP1,JBP1,KBP1,SIZE(OM_RHOPD,1),SIZE(OM_RHOPD,2),SIZE(OM_RHOPD,3), &
+                    SIZE(CELL_INDEX_OTHERD,1),SIZE(CELL_INDEX_OTHERD,2),GM%WALL_LB,GM%WALL_UB)
+                IF (N_TOTAL_SCALARS > 1) THEN
+                    CALL INTERPOLATED_DIFFUSIVE_FLUX_VLES_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(N_EXTERNAL_WALL_CELLS,N_TRACKED_SPECIES, &
+                        GM%WALL_TOPO_AOS,GM%EXTERNAL_WALL_NOMD,GM%EXTERNAL_WALL_NICD,GM%WALL_IIO,GM%WALL_JJO,GM%WALL_KKO,GM%WALL_IIO_MAX, &
+                        GM%WALL_JJO_MAX,GM%WALL_KKO_MAX,GM%MUD,ZZPD,OM_MUD,OM_ZZPD,GM%WALL_RHO_D_DZDN_F,GM%DXD,GM%DYD,GM%DZD,DX_OTHERD, &
+                        DY_OTHERD,DZ_OTHERD,RDXN_OTHERD,RDYN_OTHERD,RDZN_OTHERD,INTERPOLATED_BOUNDARY,NOM, &
+                        LBOUND(OM_MUD,1),LBOUND(OM_MUD,2),LBOUND(OM_MUD,3),RSC,IBP1,JBP1,KBP1, &
+                        SIZE(OM_MUD,1),SIZE(OM_MUD,2),SIZE(OM_MUD,3),GM%WALL_LB,GM%WALL_UB)
+                ENDIF
+            ENDDO
+
+            CALL UPDATE_WALL_ZZ_F_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TOTAL_SCALARS, N_TRACKED_SPECIES, GM%WALL_TOPO_AOS, &
+                GM%WALL_SF_INDEX, SF_SPECIES_BC_INDEX, SF_MASS_FRACTION, GM%WALL_U_NORMAL_S, WALL_ZZ_GD, GM%WALL_ZZ_F, &
+                UUD, VVD, WWD, GM%WALL_RHO_F, GM%WALL_RHO_D_DZDN_F, GM%WALL_M_DOT_G_PP_ADJUST, GM%WALL_M_DOT_G_PP_ACTUAL, &
+                NULL_BOUNDARY,OPEN_BOUNDARY,INTERPOLATED_BOUNDARY,SPECIFIED_MASS_FRACTION, &
+                GM%SURF_LB,GM%SURF_UB,GM%WALL_LB,GM%WALL_UB,IBP1,JBP1,KBP1)
+
+            CALL WALL_SPECIFIED_MASS_FLUX_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, GM%WALL_TOPO_AOS, &
+                GM%WALL_SF_INDEX, GM%WALL_PRESSURE_ZONE, SF_SPECIES_BC_INDEX, SF_MASS_FLUX, SF_M_DOT_G_PP_ADJUST_FAC, &
+                SF_M_DOT_G_PP_ACTUAL_FAC, SF_RAMP_MF_INDEX, SF_RAMP_MF_TAU, GM%WALL_T_IGN, GM%WALL_BURN_DURATION, &
+                SF_N_QDOTPP_REF,SF_N_THICK_REF,SF_HRRPUA_INT_INDEX,SF_QREF_INDEX,SF_E2T_INDEX,SF_THICK2QREF, &
+                SF_HRRPUA_END_VALUE, &
+                SF_SPYRO_TH_FACTOR,SF_REFERENCE_HEAT_FLUX_TIME_INTERVAL,SF_MINIMUM_SCALING_HEAT_FLUX, &
+                SF_MAXIMUM_SCALING_HEAT_FLUX,GM%WALL_Q_IN_SMOOTH,GM%WALL_Q_IN_SMOOTH_INT,GM%WALL_QDOTPP_INT, &
+                GM%WALL_Q_CON_F,GM%WALL_Q_RAD_IN,GM%WALL_EMISSIVITY,N_REACTIONS, &
+                GM%WALL_AREA_ADJUST, GM%WALL_RDN, GM%WALL_TMP_F, GM%WALL_RHO_F, GM%WALL_RHO_D_F, WALL_ZZ_GD, GM%WALL_ZZ_F, &
+                GM%WALL_M_DOT_G_PP_ADJUST, GM%WALL_M_DOT_G_PP_ACTUAL, GM%WALL_U_NORMAL, GM%WALL_U_NORMAL_S, PBAR_PD, MWR_ZD, R0, &
+                NULL_BOUNDARY, OPEN_BOUNDARY, INTERPOLATED_BOUNDARY, SOLID_BOUNDARY, SPECIFIED_MASS_FLUX, RAMP_T_MIN_D, &
+                RAMP_SPAN_D, RAMP_RDT_D, RAMP_NPOINTS_D, RAMP_OFFSET_D, RAMP_INTERP_D, T, DT, T_BEGIN, &
+                MERGE(1,0,INITIALIZATION_PHASE),MERGE(1,0,PREDICTOR), &
+                GM%SURF_LB,GM%SURF_UB,GM%WALL_LB,GM%WALL_UB,KBP1)
+
+            CALL WALL_RHO_F_RHOP_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, N_EXTERNAL_WALL_CELLS, &
+                GM%WALL_TOPO_AOS, GM%WALL_SF_INDEX, GM%WALL_PRESSURE_ZONE, GM%WALL_U_NORMAL, GM%WALL_U_NORMAL_S, SF_ADIABATIC, &
+                SF_THERMAL_BC_INDEX, SF_SPECIES_BC_INDEX, GM%CELL_INDEXD, GM%CELL_SOLID, GM%WALL_TMP_G, GM%WALL_RHO_G, GM%WALL_TMP_F, &
+                GM%WALL_RHO_F, WALL_ZZ_GD, GM%WALL_ZZ_F, PBAR_PD, RHOPD, GM%TMPD, ZZPD, GM%RSUMD, MWR_ZD, R0, NULL_BOUNDARY, &
+                OPEN_BOUNDARY, INTERPOLATED_BOUNDARY, INFLOW_OUTFLOW, SOLID_BOUNDARY, SPECIFIED_MASS_FLUX, &
+                MERGE(1,0,PREDICTOR),IBP1,JBP1,KBP1,GM%WALL_LB,GM%WALL_UB)
+
+            IF (GPU_DEBUG_H2D_D2H) THEN
+                CALL GPU_WAIT(GM%STRM)
+                ALLOCATE(WALL_ZZ_G_H(1:TOTAL_WALL_CELLS,1:N_TRACKED_SPECIES))
+                DO N=1,N_TRACKED_SPECIES
+                    WALL_ZZ_G_H(:,N) = GM%WALL_ZZ_G_WORKD(:,N)
+                ENDDO
+                DO N=1,N_TOTAL_SCALARS
+                    WALL_ZZ_F_H(:,N) = GM%WALL_ZZ_F(:,N)
+                ENDDO
+                DO N=1,N_TRACKED_SPECIES
+                    WALL_RHO_D_F_H(:,N) = GM%WALL_RHO_D_F(:,N)
+                    WALL_RHO_D_DZDN_F_H(:,N) = GM%WALL_RHO_D_DZDN_F(:,N)
+                    WALL_M_DOT_G_PP_ADJUST_H(:,N) = GM%WALL_M_DOT_G_PP_ADJUST(:,N)
+                    WALL_M_DOT_G_PP_ACTUAL_H(:,N) = GM%WALL_M_DOT_G_PP_ACTUAL(:,N)
+                ENDDO
+                WALL_U_TANG_H          = GM%WALL_U_TANG
+                WALL_TMP_G_H           = GM%WALL_TMP_G
+                WALL_RHO_G_H           = GM%WALL_RHO_G
+                WALL_TMP_F_H           = GM%WALL_TMP_F
+                WALL_HEAT_TRANS_COEF_H = GM%WALL_HEAT_TRANS_COEF
+                WALL_Q_CON_F_H         = GM%WALL_Q_CON_F
+                WALL_RHO_F_H           = GM%WALL_RHO_F
+                WALL_K_G_H             = GM%WALL_K_G
+                WALL_U_NORMAL_H        = GM%WALL_U_NORMAL
+                WALL_U_NORMAL_S_H      = GM%WALL_U_NORMAL_S
+                WALL_EMISSIVITY_H      = GM%WALL_EMISSIVITY
+                WALL_Q_RAD_IN_H        = GM%WALL_Q_RAD_IN
+                WALL_Q_RAD_OUT_H       = GM%WALL_Q_RAD_OUT
+                RHOP                   = RHOPD
+                TMP                    = GM%TMPD
+                ZZP                    = ZZPD
+                RSUM                   = GM%RSUMD
+                DO IW=1,TOTAL_WALL_CELLS
+                    WC => WALL(IW)
+                    IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY) CYCLE
+                    B1 => BOUNDARY_PROP1(WC%B1_INDEX)
+                    B1%U_TANG = WALL_U_TANG_H(IW)
+                    B1%TMP_G = WALL_TMP_G_H(IW)
+                    B1%RHO_G = WALL_RHO_G_H(IW)
+                    B1%TMP_F = WALL_TMP_F_H(IW)
+                    B1%U_NORMAL = WALL_U_NORMAL_H(IW)
+                    B1%U_NORMAL_S = WALL_U_NORMAL_S_H(IW)
+                    SF => SURFACE(WC%SURF_INDEX)
+                    IF (SF%THERMAL_BC_INDEX /= NO_CONVECTION) THEN
+                        B1%HEAT_TRANS_COEF = WALL_HEAT_TRANS_COEF_H(IW)
+                        B1%Q_CON_F = WALL_Q_CON_F_H(IW)
+                    ENDIF
+                    B1%K_G = WALL_K_G_H(IW)
+                    B1%EMISSIVITY = WALL_EMISSIVITY_H(IW)
+                    B1%Q_RAD_IN = WALL_Q_RAD_IN_H(IW)
+                    B1%Q_RAD_OUT = WALL_Q_RAD_OUT_H(IW)
+                    B1%ZZ_G(1:N_TRACKED_SPECIES) = WALL_ZZ_G_H(IW,1:N_TRACKED_SPECIES)
+                    B1%ZZ_F(1:N_TOTAL_SCALARS) = WALL_ZZ_F_H(IW,1:N_TOTAL_SCALARS)
+                    IF (ALLOCATED(B1%RHO_D_F)) B1%RHO_D_F(1:N_TRACKED_SPECIES) = WALL_RHO_D_F_H(IW,1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%RHO_D_DZDN_F)) B1%RHO_D_DZDN_F(1:N_TRACKED_SPECIES) = &
+                        WALL_RHO_D_DZDN_F_H(IW,1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%M_DOT_G_PP_ADJUST)) B1%M_DOT_G_PP_ADJUST(1:N_TRACKED_SPECIES) = &
+                        WALL_M_DOT_G_PP_ADJUST_H(IW,1:N_TRACKED_SPECIES)
+                    IF (ALLOCATED(B1%M_DOT_G_PP_ACTUAL)) B1%M_DOT_G_PP_ACTUAL(1:N_TRACKED_SPECIES) = &
+                        WALL_M_DOT_G_PP_ACTUAL_H(IW,1:N_TRACKED_SPECIES)
+                    B1%RHO_F = WALL_RHO_F_H(IW)
+                ENDDO
+                DEALLOCATE(WALL_ZZ_G_H)
+                DEALLOCATE(WALL_U_TANG_H, WALL_TMP_G_H, WALL_RHO_G_H, WALL_TMP_F_H, &
+                           WALL_HEAT_TRANS_COEF_H, WALL_Q_CON_F_H, WALL_RHO_F_H, &
+                           WALL_K_G_H, WALL_U_NORMAL_H, WALL_U_NORMAL_S_H, &
+                           WALL_EMISSIVITY_H, WALL_Q_RAD_IN_H, WALL_Q_RAD_OUT_H, WALL_ZZ_F_H, WALL_RHO_D_F_H, &
+                           WALL_RHO_D_DZDN_F_H, &
+                           WALL_M_DOT_G_PP_ADJUST_H, WALL_M_DOT_G_PP_ACTUAL_H)
+            ENDIF
+            T_USED(6)=T_USED(6)+CURRENT_TIME()-TNOW
+
+        END SUBROUTINE WALL_BC_GPU
+
+        !--------------------------------------------------------------------------
+        ! Wall gas, heat-transfer, mass-transfer, and ghost-value kernels
+        !--------------------------------------------------------------------------
+        ATTRIBUTES(GLOBAL) SUBROUTINE ASSIGN_GHOST_VALUE_GPU(N_EXTERNAL_WALL_CELLS, N_TOTAL_SCALARS, N_TRACKED_SPECIES, &
+            WALL_TOPO,WALL_PRESSURE_ZONED,EXT_NOMD,EXT_IIOD,EXT_JJOD,EXT_KKOD,EXT_IIOD_MAX,EXT_JJOD_MAX,EXT_KKOD_MAX, &
+            OM_RHOP,OM_ZZP,RHOPD,ZZPD,TMPD,RSUMD,PBAR_PD,MWR_ZD_IN,DX_LOCAL,DY_LOCAL,DZ_LOCAL,DX_OTHER,DY_OTHER,DZ_OTHER, &
+            NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K,R0D_IN,IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: N_EXTERNAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES
+            INTEGER, VALUE :: NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K,IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_PRESSURE_ZONED
+            INTEGER, DEVICE, DIMENSION(1:*) :: EXT_NOMD,EXT_IIOD,EXT_JJOD,EXT_KKOD
+            INTEGER, DEVICE, DIMENSION(1:*) :: EXT_IIOD_MAX,EXT_JJOD_MAX,EXT_KKOD_MAX
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:*) :: OM_RHOP
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: RHOPD,TMPD,RSUMD
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:OM_NK-1,1:*) :: OM_ZZP
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+            REAL(EB), DEVICE, DIMENSION(0:KBP1,0:*) :: PBAR_PD
+            REAL(EB), DEVICE, DIMENSION(*) :: MWR_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: DX_LOCAL,DY_LOCAL,DZ_LOCAL,DX_OTHER,DY_OTHER,DZ_OTHER
+            REAL(EB), VALUE :: R0D_IN
+
+            INTEGER :: IW,II,JJ,KK,IIO,JJO,KKO,IIO1,IIO2,JJO1,JJO2,KKO1,KKO2,N,IPZ,IOR
+            REAL(EB) :: ARO,RHO_OTHER,RHO_ZZ_OTHER,RSUM_GHOST
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > N_EXTERNAL_WALL_CELLS) RETURN
+            IF (EXT_NOMD(IW) /= NOM_FILTER) RETURN
+
+            II  = WALL_TOPO(IW)%II
+            JJ  = WALL_TOPO(IW)%JJ
+            KK  = WALL_TOPO(IW)%KK
+            IOR = WALL_TOPO(IW)%IOR
+            IIO1 = EXT_IIOD(IW)
+            JJO1 = EXT_JJOD(IW)
+            KKO1 = EXT_KKOD(IW)
+            IIO2 = EXT_IIOD_MAX(IW)
+            JJO2 = EXT_JJOD_MAX(IW)
+            KKO2 = EXT_KKOD_MAX(IW)
+
+            RHO_OTHER = 0._EB
+            DO KKO=KKO1,KKO2
+                DO JJO=JJO1,JJO2
+                    DO IIO=IIO1,IIO2
+                        SELECT CASE(IOR)
+                            CASE( 1,-1); ARO = MIN(1._EB,(DY_OTHER(JJO)*DZ_OTHER(KKO))/(DY_LOCAL(JJ)*DZ_LOCAL(KK)))
+                            CASE( 2,-2); ARO = MIN(1._EB,(DX_OTHER(IIO)*DZ_OTHER(KKO))/(DX_LOCAL(II)*DZ_LOCAL(KK)))
+                            CASE( 3,-3); ARO = MIN(1._EB,(DX_OTHER(IIO)*DY_OTHER(JJO))/(DX_LOCAL(II)*DY_LOCAL(JJ)))
+                            CASE DEFAULT; ARO = 0._EB
+                        END SELECT
+                        RHO_OTHER = RHO_OTHER + ARO*OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)
+                    ENDDO
+                ENDDO
+            ENDDO
+            IF (RHO_OTHER <= 0._EB) RETURN
+            RHOPD(II,JJ,KK) = RHO_OTHER
+
+            RSUM_GHOST = 0._EB
+            DO N = 1, N_TOTAL_SCALARS
+                RHO_ZZ_OTHER = 0._EB
+                DO KKO=KKO1,KKO2
+                    DO JJO=JJO1,JJO2
+                        DO IIO=IIO1,IIO2
+                            SELECT CASE(IOR)
+                                CASE( 1,-1); ARO = MIN(1._EB,(DY_OTHER(JJO)*DZ_OTHER(KKO))/(DY_LOCAL(JJ)*DZ_LOCAL(KK)))
+                                CASE( 2,-2); ARO = MIN(1._EB,(DX_OTHER(IIO)*DZ_OTHER(KKO))/(DX_LOCAL(II)*DZ_LOCAL(KK)))
+                                CASE( 3,-3); ARO = MIN(1._EB,(DX_OTHER(IIO)*DY_OTHER(JJO))/(DX_LOCAL(II)*DY_LOCAL(JJ)))
+                                CASE DEFAULT; ARO = 0._EB
+                            END SELECT
+                            RHO_ZZ_OTHER = RHO_ZZ_OTHER + ARO*OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)* &
+                                OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N)
+                        ENDDO
+                    ENDDO
+                ENDDO
+                ZZPD(II,JJ,KK,N) = MAX(0._EB,MIN(1._EB,RHO_ZZ_OTHER/RHO_OTHER))
+                IF (N <= N_TRACKED_SPECIES) RSUM_GHOST = RSUM_GHOST + MWR_ZD_IN(N)*ZZPD(II,JJ,KK,N)
+            ENDDO
+            RSUM_GHOST = R0D_IN*RSUM_GHOST
+            IF (RSUM_GHOST <= 0._EB) RETURN
+            RSUMD(II,JJ,KK) = RSUM_GHOST
+
+            IPZ = WALL_PRESSURE_ZONED(IW)
+            TMPD(II,JJ,KK) = PBAR_PD(KK,IPZ)/(RSUM_GHOST*RHO_OTHER)
+
+        END SUBROUTINE ASSIGN_GHOST_VALUE_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE NEAR_SURFACE_GAS_VARIABLES_GPU(UUD, VVD, WWD, RHOPD, TMPD, ZZPD, WALL_TOPO, &
+            WALL_U_TANGD,WALL_TMP_GD,WALL_RHO_GD,WALL_ZZ_GD,TOTAL_WALL_CELLS,N_TRACKED_SPECIES,IBP1,JBP1,KBP1)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TRACKED_SPECIES,IBP1,JBP1,KBP1
+
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: UUD,VVD,WWD,RHOPD,TMPD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+
+            REAL(EB), DEVICE, DIMENSION(0:*)     :: WALL_U_TANGD,WALL_TMP_GD,WALL_RHO_GD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+
+            INTEGER :: IW, N
+            INTEGER :: IIG,JJG,KKG
+            REAL(EB) :: UBAR,VBAR,WBAR
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+
+            SELECT CASE(WALL_TOPO(IW)%IOR)
+                CASE(1,-1)
+                    VBAR = 0.5_EB*(VVD(IIG,JJG,KKG)+VVD(IIG,JJG-1,KKG))
+                    WBAR = 0.5_EB*(WWD(IIG,JJG,KKG)+WWD(IIG,JJG,KKG-1))
+                    WALL_U_TANGD(IW) = SQRT(VBAR**2+WBAR**2)
+                CASE(2,-2)
+                    UBAR = 0.5_EB*(UUD(IIG,JJG,KKG)+UUD(IIG-1,JJG,KKG))
+                    WBAR = 0.5_EB*(WWD(IIG,JJG,KKG)+WWD(IIG,JJG,KKG-1))
+                    WALL_U_TANGD(IW) = SQRT(UBAR**2+WBAR**2)
+                CASE(3,-3)
+                    UBAR = 0.5_EB*(UUD(IIG,JJG,KKG)+UUD(IIG-1,JJG,KKG))
+                    VBAR = 0.5_EB*(VVD(IIG,JJG,KKG)+VVD(IIG,JJG-1,KKG))
+                    WALL_U_TANGD(IW) = SQRT(UBAR**2+VBAR**2)
+            END SELECT
+
+            WALL_TMP_GD(IW) = TMPD(IIG,JJG,KKG)
+            WALL_RHO_GD(IW) = RHOPD(IIG,JJG,KKG)
+
+            DO N = 1, N_TRACKED_SPECIES
+                WALL_ZZ_GD(IW,N) = ZZPD(IIG,JJG,KKG,N)
+            ENDDO
+
+        END SUBROUTINE NEAR_SURFACE_GAS_VARIABLES_GPU
+
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE SURFACE_HEAT_TRANSFER_NO_CONVECTION_GPU(TOTAL_WALL_CELLS, WALL_TOPO, WALL_SF_INDEXD, &
+            SF_THERMAL_BC_INDEXD, WALL_TMP_GD, WALL_TMP_FD, WALL_EMISSIVITYD, WALL_Q_RAD_OUTD, RADIATION_FLAG)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS, RADIATION_FLAG
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD, SF_THERMAL_BC_INDEXD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_TMP_GD, WALL_TMP_FD, WALL_EMISSIVITYD, WALL_Q_RAD_OUTD
+            INTEGER :: IW, SF_IDX
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == 0) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+            IF (SF_THERMAL_BC_INDEXD(SF_IDX) /= NO_CONVECTION) RETURN
+
+            WALL_TMP_FD(IW) = WALL_TMP_GD(IW)
+            IF (RADIATION_FLAG /= 0) WALL_Q_RAD_OUTD(IW) = SIGMA*WALL_EMISSIVITYD(IW)*WALL_TMP_FD(IW)**4
+
+        END SUBROUTINE SURFACE_HEAT_TRANSFER_NO_CONVECTION_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE SURFACE_HEAT_TRANSFER_INFLOW_OUTFLOW_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, WALL_TOPO, &
+            WALL_SF_INDEXD, WALL_PRESSURE_ZONED, UUD, VVD, WWD, WALL_TMP_GD, TMP_0D, SF_THERMAL_BC_INDEXD, WALL_TMP_FD, &
+            WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD, WALL_K_GD, WALL_RDND, WALL_ZZ_FD, WALL_ZZ_GD, SPECIES_ZZ0D_IN, RHOPD, &
+            TMPD,ZZPD,RSUMD,PBAR_PD,MWR_ZD_IN,R0D_IN,WALL_EMISSIVITYD,WALL_Q_RAD_OUTD,RADIATION_FLAG, &
+            IBP1,JBP1,KBP1,WALL_LB,WALL_UB)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TRACKED_SPECIES,RADIATION_FLAG,IBP1,JBP1,KBP1,WALL_LB,WALL_UB
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_PRESSURE_ZONED, SF_THERMAL_BC_INDEXD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: UUD,VVD,WWD,RHOPD,TMPD,RSUMD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+            REAL(EB), DEVICE, DIMENSION(0:KBP1,0:*) :: PBAR_PD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_TMP_GD, TMP_0D
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_TMP_FD, WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_K_GD, WALL_RDND
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_EMISSIVITYD, WALL_Q_RAD_OUTD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_ZZ_FD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(*) :: SPECIES_ZZ0D_IN, MWR_ZD_IN
+            REAL(EB), VALUE :: R0D_IN
+
+            INTEGER :: IW, IOR, II, JJ, KK, SF_IDX, IPZ, N
+            REAL(EB) :: UN, RSUM_F
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == 0) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+            IF (SF_THERMAL_BC_INDEXD(SF_IDX) /= INFLOW_OUTFLOW) RETURN
+
+            IOR = WALL_TOPO(IW)%IOR
+            II  = WALL_TOPO(IW)%II
+            JJ  = WALL_TOPO(IW)%JJ
+            KK  = WALL_TOPO(IW)%KK
+
+            SELECT CASE(IOR)
+                CASE( 1); UN =  UUD(II  ,JJ  ,KK  )
+                CASE(-1); UN = -UUD(II-1,JJ  ,KK  )
+                CASE( 2); UN =  VVD(II  ,JJ  ,KK  )
+                CASE(-2); UN = -VVD(II  ,JJ-1,KK  )
+                CASE( 3); UN =  WWD(II  ,JJ  ,KK  )
+                CASE(-3); UN = -WWD(II  ,JJ  ,KK-1)
+                CASE DEFAULT; UN = 0._EB
+            END SELECT
+
+            IF (UN > TWO_EPSILON_EB) THEN
+                WALL_TMP_FD(IW) = TMP_0D(KK)
+                DO N = 1, N_TRACKED_SPECIES
+                    WALL_ZZ_FD(IW,N) = SPECIES_ZZ0D_IN(N)
+                ENDDO
+            ELSE
+                WALL_TMP_FD(IW) = WALL_TMP_GD(IW)
+                DO N = 1, N_TRACKED_SPECIES
+                    WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                ENDDO
+            ENDIF
+
+            TMPD(II,JJ,KK) = WALL_TMP_FD(IW)
+            DO N = 1, N_TRACKED_SPECIES
+                ZZPD(II,JJ,KK,N) = WALL_ZZ_FD(IW,N)
+            ENDDO
+            RSUM_F = 0._EB
+            DO N = 1, N_TRACKED_SPECIES
+                RSUM_F = RSUM_F + MWR_ZD_IN(N)*MAX(0._EB,WALL_ZZ_FD(IW,N))
+            ENDDO
+            RSUM_F = R0D_IN*RSUM_F
+
+            IPZ = WALL_PRESSURE_ZONED(IW)
+            RSUMD(II,JJ,KK) = RSUM_F
+            RHOPD(II,JJ,KK) = PBAR_PD(KK,IPZ)/(RSUM_F*TMPD(II,JJ,KK))
+
+            WALL_HEAT_TRANS_COEFD(IW) = 0._EB
+            WALL_Q_CON_FD(IW) = 2._EB*WALL_K_GD(IW)*(WALL_TMP_GD(IW)-WALL_TMP_FD(IW))*WALL_RDND(IW)
+            IF (RADIATION_FLAG /= 0) WALL_Q_RAD_OUTD(IW) = SIGMA*WALL_EMISSIVITYD(IW)*WALL_TMP_FD(IW)**4
+
+        END SUBROUTINE SURFACE_HEAT_TRANSFER_INFLOW_OUTFLOW_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE SURFACE_HEAT_TRANSFER_NET_FLUX_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, WALL_TOPO, &
+            WALL_SF_INDEXD, WALL_RDND, WALL_U_TANGD, WALL_TMP_GD, WALL_TMP_FD, WALL_RHO_GD, WALL_ZZ_GD, &
+            SF_THERMAL_BC_INDEXD, SF_H_FIXEDD, SF_CONV_LENGTHD, SF_CONVECTIVE_HEAT_FLUXD, SF_NET_HEAT_FLUXD, &
+            SF_RAMP_HEAT_INDEXD, SF_RAMP_HEAT_TAUD, WALL_T_IGND, WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD, WALL_EMISSIVITYD, &
+            WALL_Q_RAD_IND, WALL_Q_RAD_OUTD, MU_RSQMW_ZD_IN, K_RSQMW_ZD_IN, RSQ_MW_ZD_IN, RAMP_T_MIND, RAMP_SPAND, &
+            RAMP_RDTD,RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD,T_IN,T_BEGIN_IN,GRAV_IN,PR_AIR_IN,RADIATION_FLAG,I_MAX_TEMP_IN)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TRACKED_SPECIES,RADIATION_FLAG,I_MAX_TEMP_IN
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD, SF_THERMAL_BC_INDEXD
+            INTEGER, DEVICE, DIMENSION(0:*) :: SF_RAMP_HEAT_INDEXD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_RDND, WALL_U_TANGD, WALL_TMP_GD, WALL_TMP_FD, WALL_RHO_GD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_H_FIXEDD, SF_CONV_LENGTHD, SF_CONVECTIVE_HEAT_FLUXD, SF_NET_HEAT_FLUXD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_RAMP_HEAT_TAUD, WALL_T_IGND, WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_EMISSIVITYD, WALL_Q_RAD_IND, WALL_Q_RAD_OUTD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(0:I_MAX_TEMP_IN,1:*) :: MU_RSQMW_ZD_IN,K_RSQMW_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(*) :: RSQ_MW_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: RAMP_T_MIND, RAMP_SPAND, RAMP_RDTD
+            INTEGER, DEVICE, DIMENSION(0:*) :: RAMP_NPOINTSD, RAMP_OFFSETD
+            REAL(EB), DEVICE, DIMENSION(1:*) :: RAMP_INTERPD
+            REAL(EB), VALUE :: T_IN, T_BEGIN_IN, GRAV_IN, PR_AIR_IN
+
+            INTEGER :: IW, IOR, SF_IDX, ITMP, N, ADCOUNT
+            REAL(EB) :: H_FIXED, QNET, DTMP, DN, TMP_FILM, CONV_LENGTH, HTC_OLD, RAMP_FACTOR, TSI
+            REAL(EB) :: RE, GR, RA, NUSSELT_FORCED, NUSSELT_FREE
+            REAL(EB) :: MU_G, K_G, NUMER, DENOM
+            REAL(EB) :: ONSI, ONTH, PR_ONTH
+            REAL(EB) :: EPS_SIGMA, BBB, CCC, PPP, QQQ, RRR, UUU, YYY, WWW, RAD_ARG
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == 0) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+            IF (SF_THERMAL_BC_INDEXD(SF_IDX) /= NET_FLUX_BC .AND. &
+                SF_THERMAL_BC_INDEXD(SF_IDX) /= CONVECTIVE_FLUX_BC) RETURN
+
+            ONTH = 1._EB/3._EB
+            H_FIXED = SF_H_FIXEDD(SF_IDX)
+            IF (ABS(WALL_T_IGND(IW)-T_BEGIN_IN) <= SPACING(WALL_T_IGND(IW)) .AND. SF_RAMP_HEAT_INDEXD(SF_IDX)>=1) THEN
+                TSI = T_IN
+            ELSE
+                TSI = T_IN - WALL_T_IGND(IW)
+            ENDIF
+            RAMP_FACTOR = EVALUATE_RAMP_DEVICE(TSI,SF_RAMP_HEAT_INDEXD(SF_IDX),SF_RAMP_HEAT_TAUD(SF_IDX), &
+                                               RAMP_T_MIND,RAMP_SPAND,RAMP_RDTD,RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+
+            IF (SF_THERMAL_BC_INDEXD(SF_IDX) == NET_FLUX_BC) THEN
+                QNET = -RAMP_FACTOR*SF_NET_HEAT_FLUXD(SF_IDX)
+            ELSE
+                QNET = -RAMP_FACTOR*SF_CONVECTIVE_HEAT_FLUXD(SF_IDX)
+            ENDIF
+
+            IF (ABS(QNET) < TWO_EPSILON_EB .AND. RADIATION_FLAG == 0) THEN
+                WALL_HEAT_TRANS_COEFD(IW) = 0._EB
+                WALL_TMP_FD(IW) = WALL_TMP_GD(IW)
+                WALL_Q_CON_FD(IW) = 0._EB
+                RETURN
+            ENDIF
+
+            IF (ABS(H_FIXED) < TWO_EPSILON_EB) THEN
+                IF (RADIATION_FLAG /= 0 .AND. WALL_EMISSIVITYD(IW) > TWO_EPSILON_EB) THEN
+                    RAD_ARG = MAX(0._EB,(-QNET + WALL_Q_RAD_IND(IW))/(WALL_EMISSIVITYD(IW)*SIGMA))
+                    WALL_TMP_FD(IW) = RAD_ARG**0.25_EB
+                    WALL_Q_RAD_OUTD(IW) = SIGMA*WALL_EMISSIVITYD(IW)*WALL_TMP_FD(IW)**4
+                ENDIF
+                WALL_HEAT_TRANS_COEFD(IW) = 0._EB
+                WALL_Q_CON_FD(IW) = 0._EB
+                RETURN
+            ENDIF
+
+            HTC_OLD = WALL_HEAT_TRANS_COEFD(IW)
+            ADCOUNT = 0
+
+            DO
+                ADCOUNT = ADCOUNT + 1
+                DTMP = WALL_TMP_GD(IW) - WALL_TMP_FD(IW)
+                IF (ABS(QNET) > 0._EB .AND. ABS(DTMP) < TWO_EPSILON_EB) DTMP = 1._EB
+
+                ! Heat-transfer coefficient.
+                IF (H_FIXED >= 0._EB) THEN
+                    WALL_HEAT_TRANS_COEFD(IW) = H_FIXED
+                ELSE
+                    ONSI        = 1._EB/6._EB
+                    PR_ONTH     = PR_AIR_IN**ONTH
+                    IOR         = WALL_TOPO(IW)%IOR
+                    CONV_LENGTH = SF_CONV_LENGTHD(SF_IDX)
+                    DN          = 1._EB / WALL_RDND(IW)
+
+                    TMP_FILM = WALL_TMP_FD(IW) + ONTH * (WALL_TMP_GD(IW) - WALL_TMP_FD(IW))
+                    TMP_FILM = MAX(1._EB,TMP_FILM)
+                    ITMP = MAX(0,MIN(5000, NINT(TMP_FILM)))
+
+                    NUMER = 0._EB
+                    DENOM = 0._EB
+                    DO N = 1, N_TRACKED_SPECIES
+                        NUMER = NUMER + K_RSQMW_ZD_IN(ITMP,N) * WALL_ZZ_GD(IW,N)
+                        DENOM = DENOM + WALL_ZZ_GD(IW,N) * RSQ_MW_ZD_IN(N)
+                    ENDDO
+                    IF (ABS(DENOM) > TWO_EPSILON_EB) THEN
+                        K_G = NUMER / DENOM
+                    ELSE
+                        K_G = 0._EB
+                    ENDIF
+
+                    NUMER = 0._EB
+                    DENOM = 0._EB
+                    DO N = 1, N_TRACKED_SPECIES
+                        NUMER = NUMER + MU_RSQMW_ZD_IN(ITMP,N) * WALL_ZZ_GD(IW,N)
+                        DENOM = DENOM + WALL_ZZ_GD(IW,N) * RSQ_MW_ZD_IN(N)
+                    ENDDO
+                    IF (ABS(DENOM) > TWO_EPSILON_EB) THEN
+                        MU_G = NUMER / DENOM
+                    ELSE
+                        MU_G = 0._EB
+                    ENDIF
+
+                    IF (ABS(MU_G) <= TWO_EPSILON_EB .OR. ABS(K_G) <= TWO_EPSILON_EB .OR. CONV_LENGTH <= TWO_EPSILON_EB) THEN
+                        WALL_HEAT_TRANS_COEFD(IW) = 0._EB
+                    ELSE
+                        RE = MAX(0._EB,WALL_RHO_GD(IW) * WALL_U_TANGD(IW) * CONV_LENGTH / MU_G)
+                        GR = GRAV_IN * ABS(DTMP) * CONV_LENGTH**3 * (WALL_RHO_GD(IW)/MU_G)**2 / TMP_FILM
+                        NUSSELT_FORCED = 0.0296_EB * RE**0.8_EB * PR_ONTH
+                        RA = GR * PR_AIR_IN
+
+                        SELECT CASE(ABS(IOR))
+                            CASE(0:2)
+                                NUSSELT_FREE = (0.825_EB + 0.324_EB*RA**ONSI)**2
+                            CASE(3)
+                                IF ((IOR==3 .AND. DTMP<0._EB) .OR. (IOR==-3 .AND. DTMP>=0._EB)) THEN
+                                    IF (RA < 1.E7_EB) THEN
+                                        NUSSELT_FREE = 0.54_EB*RA**0.25_EB
+                                    ELSE
+                                        NUSSELT_FREE = 0.15_EB*RA**ONTH
+                                    ENDIF
+                                ELSE
+                                    NUSSELT_FREE = 0.52_EB*RA**0.2_EB
+                                ENDIF
+                        END SELECT
+
+                        WALL_HEAT_TRANS_COEFD(IW) = MAX(NUSSELT_FREE, NUSSELT_FORCED, 2._EB*CONV_LENGTH/DN) * K_G / CONV_LENGTH
+                    ENDIF
+                ENDIF
+
+                IF (RADIATION_FLAG == 0) THEN
+                    IF (ABS(QNET) < TWO_EPSILON_EB) THEN
+                        HTC_OLD = 0._EB
+                        WALL_TMP_FD(IW) = WALL_TMP_GD(IW)
+                    ELSE
+                        HTC_OLD = WALL_HEAT_TRANS_COEFD(IW)
+                        IF (ABS(WALL_HEAT_TRANS_COEFD(IW)) < TWO_EPSILON_EB) EXIT
+                        WALL_TMP_FD(IW) = (-QNET + WALL_HEAT_TRANS_COEFD(IW)*WALL_TMP_GD(IW))/WALL_HEAT_TRANS_COEFD(IW)
+                    ENDIF
+                    EXIT
+                ENDIF
+
+                IF (WALL_EMISSIVITYD(IW) <= TWO_EPSILON_EB .OR. ABS(WALL_HEAT_TRANS_COEFD(IW)) < TWO_EPSILON_EB) THEN
+                    HTC_OLD = WALL_HEAT_TRANS_COEFD(IW)
+                    EXIT
+                ENDIF
+
+                EPS_SIGMA = WALL_EMISSIVITYD(IW)*SIGMA
+                BBB = WALL_HEAT_TRANS_COEFD(IW)/EPS_SIGMA
+                CCC = -(WALL_Q_RAD_IND(IW)+WALL_HEAT_TRANS_COEFD(IW)*WALL_TMP_GD(IW)-QNET)/EPS_SIGMA
+                PPP = -CCC
+                QQQ = -0.125_EB*BBB**2
+                RRR = -0.5_EB*QQQ + SQRT(MAX(0._EB,0.25_EB*QQQ**2+PPP**3/27._EB))
+                UUU = SIGN(ABS(RRR)**ONTH,RRR)
+                IF (ABS(UUU) < TWO_EPSILON_EB) THEN
+                    YYY = SIGN(ABS(-QQQ)**ONTH,-QQQ)
+                ELSE
+                    YYY = UUU - ONTH*PPP/UUU
+                ENDIF
+                WWW = SQRT(MAX(0._EB,2._EB*YYY))
+                IF (WWW > TWO_EPSILON_EB) THEN
+                    WALL_TMP_FD(IW) = 0.5_EB*(-WWW + SQRT(MAX(0._EB,-2._EB*(YYY-BBB/WWW))))
+                ELSE
+                    WALL_TMP_FD(IW) = (-QNET + WALL_HEAT_TRANS_COEFD(IW)*WALL_TMP_GD(IW))/WALL_HEAT_TRANS_COEFD(IW)
+                ENDIF
+
+                HTC_OLD = 0.2_EB*HTC_OLD + 0.8_EB*WALL_HEAT_TRANS_COEFD(IW)
+                IF (ABS(HTC_OLD-WALL_HEAT_TRANS_COEFD(IW)) < 1.E-6_EB .OR. ADCOUNT > 20) EXIT
+            ENDDO
+
+            WALL_HEAT_TRANS_COEFD(IW) = HTC_OLD
+            WALL_Q_CON_FD(IW) = WALL_HEAT_TRANS_COEFD(IW)*(WALL_TMP_GD(IW)-WALL_TMP_FD(IW))
+            IF (RADIATION_FLAG /= 0) WALL_Q_RAD_OUTD(IW) = SIGMA*WALL_EMISSIVITYD(IW)*WALL_TMP_FD(IW)**4
+
+        END SUBROUTINE SURFACE_HEAT_TRANSFER_NET_FLUX_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE SURFACE_HEAT_TRANSFER_SPECIFIED_TEMPERATURE_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, &
+            WALL_TOPO, WALL_SF_INDEXD, WALL_RDND, WALL_U_TANGD, WALL_U_NORMALD, WALL_TMP_GD, WALL_RHO_GD, WALL_ZZ_GD, &
+            SF_TMP_FRONTD, SF_H_FIXEDD, SF_CONV_LENGTHD, SF_THERMAL_BC_INDEXD, TMP_0D, SF_RAMP_TEMP_INDEXD, &
+            SF_RAMP_TEMP_TAUD, WALL_T_IGND, WALL_TMP_FD, WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD, WALL_K_GD, &
+            WALL_EMISSIVITYD, WALL_Q_RAD_OUTD, MU_RSQMW_ZD_IN, K_RSQMW_ZD_IN, RSQ_MW_ZD_IN, RAMP_T_MIND, RAMP_SPAND, &
+            RAMP_RDTD,RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD,T_IN,T_BEGIN_IN,GRAV_IN,PR_AIR_IN,RADIATION_FLAG,I_MAX_TEMP_IN)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TRACKED_SPECIES,RADIATION_FLAG,I_MAX_TEMP_IN
+
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD
+            INTEGER, DEVICE, DIMENSION(0:*) :: SF_THERMAL_BC_INDEXD, SF_RAMP_TEMP_INDEXD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_RDND
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_U_TANGD, WALL_U_NORMALD, WALL_TMP_GD, WALL_RHO_GD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_RAMP_TEMP_TAUD, WALL_T_IGND, WALL_TMP_FD, WALL_HEAT_TRANS_COEFD, WALL_Q_CON_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_K_GD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_EMISSIVITYD, WALL_Q_RAD_OUTD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_TMP_FRONTD, SF_H_FIXEDD, SF_CONV_LENGTHD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: TMP_0D
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(0:I_MAX_TEMP_IN,1:*) :: MU_RSQMW_ZD_IN,K_RSQMW_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(*) :: RSQ_MW_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: RAMP_T_MIND, RAMP_SPAND, RAMP_RDTD
+            INTEGER, DEVICE, DIMENSION(0:*) :: RAMP_NPOINTSD, RAMP_OFFSETD
+            REAL(EB), DEVICE, DIMENSION(1:*) :: RAMP_INTERPD
+            REAL(EB), VALUE :: T_IN, T_BEGIN_IN, GRAV_IN, PR_AIR_IN
+
+            INTEGER :: IW, IOR, KKG, SF_IDX, ITMP, N
+            REAL(EB) :: DTMP, DN, TMP_FILM, H_FIXED, RAMP_FACTOR, TSI
+            REAL(EB) :: RE, GR, RA, NUSSELT_FORCED, NUSSELT_FREE
+            REAL(EB) :: MU_G, K_G, NUMER, DENOM
+            REAL(EB) :: ONSI, ONTH, PR_ONTH, CONV_LENGTH
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == 0) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+            IF (SF_THERMAL_BC_INDEXD(SF_IDX) /= SPECIFIED_TEMPERATURE) RETURN
+
+            IOR = WALL_TOPO(IW)%IOR
+            KKG = WALL_TOPO(IW)%KKG
+            H_FIXED = SF_H_FIXEDD(SF_IDX)
+            ONSI        = 1._EB/6._EB
+            ONTH        = 1._EB/3._EB
+            PR_ONTH     = PR_AIR_IN**ONTH
+            CONV_LENGTH = SF_CONV_LENGTHD(SF_IDX)
+            IF (ABS(WALL_T_IGND(IW)-T_BEGIN_IN) <= SPACING(WALL_T_IGND(IW)) .AND. SF_RAMP_TEMP_INDEXD(SF_IDX)>=1) THEN
+                TSI = T_IN
+            ELSE
+                TSI = T_IN - WALL_T_IGND(IW)
+            ENDIF
+
+            IF (WALL_U_NORMALD(IW) > TWO_EPSILON_EB) THEN
+                WALL_TMP_FD(IW) = WALL_TMP_GD(IW)
+            ELSEIF (SF_TMP_FRONTD(SF_IDX) > 0._EB) THEN
+                RAMP_FACTOR = EVALUATE_RAMP_DEVICE(TSI,SF_RAMP_TEMP_INDEXD(SF_IDX),SF_RAMP_TEMP_TAUD(SF_IDX), &
+                                                   RAMP_T_MIND,RAMP_SPAND,RAMP_RDTD,RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+                WALL_TMP_FD(IW) = TMP_0D(KKG) + RAMP_FACTOR*(SF_TMP_FRONTD(SF_IDX)-TMP_0D(KKG))
+            ELSE
+                WALL_TMP_FD(IW) = TMP_0D(KKG)
+            ENDIF
+
+            DTMP = WALL_TMP_GD(IW) - WALL_TMP_FD(IW)
+
+            TMP_FILM = WALL_TMP_FD(IW) + ONTH * (WALL_TMP_GD(IW) - WALL_TMP_FD(IW))
+            ITMP = MAX(0,MIN(5000, NINT(TMP_FILM)))
+
+            NUMER = 0._EB
+            DENOM = 0._EB
+            DO N = 1, N_TRACKED_SPECIES
+                NUMER = NUMER + K_RSQMW_ZD_IN(ITMP,N) * WALL_ZZ_GD(IW,N)
+                DENOM = DENOM + WALL_ZZ_GD(IW,N) * RSQ_MW_ZD_IN(N)
+            ENDDO
+            IF (ABS(DENOM) > TWO_EPSILON_EB) THEN
+                K_G = NUMER / DENOM
+            ELSE
+                K_G = 0._EB
+            ENDIF
+            IF (H_FIXED >= 0._EB) THEN
+                WALL_HEAT_TRANS_COEFD(IW) = H_FIXED
+            ELSE
+                DN          = 1._EB / WALL_RDND(IW)
+
+                NUMER = 0._EB
+                DENOM = 0._EB
+                DO N = 1, N_TRACKED_SPECIES
+                    NUMER = NUMER + MU_RSQMW_ZD_IN(ITMP,N) * WALL_ZZ_GD(IW,N)
+                    DENOM = DENOM + WALL_ZZ_GD(IW,N) * RSQ_MW_ZD_IN(N)
+                ENDDO
+                MU_G = NUMER / DENOM
+
+                RE = WALL_RHO_GD(IW) * WALL_U_TANGD(IW) * CONV_LENGTH / MU_G
+                GR = GRAV_IN * ABS(DTMP) * CONV_LENGTH**3 * (WALL_RHO_GD(IW)/MU_G)**2 / TMP_FILM
+                NUSSELT_FORCED = 0.0296_EB * RE**0.8_EB * PR_ONTH
+                RA = GR * PR_AIR_IN
+
+                SELECT CASE(ABS(IOR))
+                    CASE(0:2)
+                        NUSSELT_FREE = (0.825_EB + 0.324_EB*RA**ONSI)**2
+                    CASE(3)
+                        IF ((IOR==3 .AND. DTMP<0._EB) .OR. (IOR==-3 .AND. DTMP>=0._EB)) THEN
+                            IF (RA < 1.E7_EB) THEN
+                                NUSSELT_FREE = 0.54_EB*RA**0.25_EB
+                            ELSE
+                                NUSSELT_FREE = 0.15_EB*RA**ONTH
+                            ENDIF
+                        ELSE
+                            NUSSELT_FREE = 0.52_EB*RA**0.2_EB
+                        ENDIF
+                END SELECT
+
+                WALL_HEAT_TRANS_COEFD(IW) = MAX(NUSSELT_FREE, NUSSELT_FORCED, 2._EB*CONV_LENGTH/DN) * K_G / CONV_LENGTH
+            ENDIF
+
+            WALL_Q_CON_FD(IW) = WALL_HEAT_TRANS_COEFD(IW) * DTMP
+            IF (RADIATION_FLAG /= 0) WALL_Q_RAD_OUTD(IW) = SIGMA*WALL_EMISSIVITYD(IW)*WALL_TMP_FD(IW)**4
+
+        END SUBROUTINE SURFACE_HEAT_TRANSFER_SPECIFIED_TEMPERATURE_GPU
+
+        !--------------------------------------------------------------------------
+        ! Local wall scalar-face interpolation helper
+        !--------------------------------------------------------------------------
+        ATTRIBUTES(DEVICE) REAL(EB) FUNCTION SCALAR_FACE_VALUE_LOCAL(A,Q0,Q1,Q2,Q3,LIMITER,TWO_EPS)
+            IMPLICIT NONE
+            REAL(EB), VALUE :: A,Q0,Q1,Q2,Q3,TWO_EPS
+            INTEGER, VALUE :: LIMITER
+            REAL(EB) :: R,B,DU_LOC,DU_UP
+
+            SELECT CASE(LIMITER)
+                CASE(0)
+                    SCALAR_FACE_VALUE_LOCAL = 0.5_EB*(Q1+Q2)
+                CASE(1)
+                    IF (A > 0._EB) THEN
+                        SCALAR_FACE_VALUE_LOCAL = Q1
+                    ELSE
+                        SCALAR_FACE_VALUE_LOCAL = Q2
+                    ENDIF
+                CASE(3)
+                    DU_LOC = Q2-Q1
+                    IF (A > 0._EB) THEN
+                        DU_UP = Q1-Q0
+                        R = DU_UP/(DU_LOC+SIGN(TWO_EPS,DU_LOC))
+                        B = MAX(0._EB,MIN(R,1._EB))
+                        SCALAR_FACE_VALUE_LOCAL = Q1 + 0.5_EB*B*DU_LOC
+                    ELSE
+                        DU_UP = Q3-Q2
+                        R = DU_UP/(DU_LOC+SIGN(TWO_EPS,DU_LOC))
+                        B = MAX(0._EB,MIN(R,1._EB))
+                        SCALAR_FACE_VALUE_LOCAL = Q2 - 0.5_EB*B*DU_LOC
+                    ENDIF
+                CASE(4)
+                    DU_LOC = Q2-Q1
+                    IF (A > 0._EB) THEN
+                        DU_UP = Q1-Q0
+                        R = 0._EB
+                        B = 0._EB
+                        IF (ABS(DU_UP) > TWO_EPS) R = DU_LOC/DU_UP
+                        IF (R > 0._EB) B = R*(3._EB*R+1._EB)/((R+1._EB)**2)
+                        SCALAR_FACE_VALUE_LOCAL = Q1 + 0.5_EB*B*DU_UP
+                    ELSE
+                        DU_UP = Q3-Q2
+                        R = 0._EB
+                        B = 0._EB
+                        IF (ABS(DU_UP) > TWO_EPS) R = DU_LOC/DU_UP
+                        IF (R > 0._EB) B = R*(3._EB*R+1._EB)/((R+1._EB)**2)
+                        SCALAR_FACE_VALUE_LOCAL = Q2 - 0.5_EB*B*DU_UP
+                    ENDIF
+                CASE DEFAULT
+                    DU_LOC = Q2-Q1
+                    IF (A > 0._EB) THEN
+                        DU_UP = Q1-Q0
+                        R = DU_UP/(DU_LOC+SIGN(TWO_EPS,DU_LOC))
+                        B = MAX(0._EB,MIN(2._EB*R,1._EB),MIN(R,2._EB))
+                        SCALAR_FACE_VALUE_LOCAL = Q1 + 0.5_EB*B*DU_LOC
+                    ELSE
+                        DU_UP = Q3-Q2
+                        R = DU_UP/(DU_LOC+SIGN(TWO_EPS,DU_LOC))
+                        B = MAX(0._EB,MIN(2._EB*R,1._EB),MIN(R,2._EB))
+                        SCALAR_FACE_VALUE_LOCAL = Q2 - 0.5_EB*B*DU_LOC
+                    ENDIF
+            END SELECT
+
+        END FUNCTION SCALAR_FACE_VALUE_LOCAL
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE INTERPOLATED_RHO_F_GPU(N_EXTERNAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES, &
+            WALL_TOPO,WALL_PRESSURE_ZONED,EXT_NOMD,EXT_IIOD,EXT_JJOD,EXT_KKOD,EXT_AREA_RATIO,UUD,VVD,WWD,RHOPD,ZZPD, &
+            OM_RHOP,OM_ZZP,WALL_RHO_GD,WALL_RHO_FD,WALL_ZZ_FD,WALL_TMP_FD,WALL_Q_CON_FD,PBAR_PD,DZD_IN,MWR_ZD_IN, &
+            CELL_INDEX_LOCAL,CELL_SOLID_LOCAL,CELL_INDEX_OTHER,CELL_SOLID_OTHER,INTERPOLATED_BOUNDARY_IN, &
+            I_FLUX_LIMITER_IN,NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K,TWO_EPSILON_EB_IN,R0D_IN, &
+            IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK,OTHER_NI,OTHER_NJ,WALL_LB,WALL_UB)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: N_EXTERNAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES
+            INTEGER, VALUE :: INTERPOLATED_BOUNDARY_IN,I_FLUX_LIMITER_IN
+            INTEGER, VALUE :: NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K
+            INTEGER, VALUE :: IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK,OTHER_NI,OTHER_NJ,WALL_LB,WALL_UB
+            REAL(EB), VALUE :: TWO_EPSILON_EB_IN
+
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_PRESSURE_ZONED
+            INTEGER, DEVICE, DIMENSION(1:*) :: EXT_NOMD, EXT_IIOD, EXT_JJOD, EXT_KKOD
+            REAL(EB), DEVICE, DIMENSION(1:*) :: EXT_AREA_RATIO
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: UUD,VVD,WWD,RHOPD
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:*) :: OM_RHOP
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:OM_NK-1,1:*) :: OM_ZZP
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_RHO_GD,WALL_RHO_FD,WALL_TMP_FD,WALL_Q_CON_FD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_ZZ_FD
+            REAL(EB), DEVICE, DIMENSION(0:KBP1,0:*) :: PBAR_PD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: DZD_IN
+            REAL(EB), DEVICE, DIMENSION(*) :: MWR_ZD_IN
+            INTEGER, DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: CELL_INDEX_LOCAL
+            INTEGER, DEVICE, DIMENSION(0:OTHER_NI-1,0:OTHER_NJ-1,0:*) :: CELL_INDEX_OTHER
+            LOGICAL, DEVICE, DIMENSION(0:*) :: CELL_SOLID_LOCAL,CELL_SOLID_OTHER
+            REAL(EB), VALUE :: R0D_IN
+
+            INTEGER :: IW,IOR,II,JJ,KK,IIG,JJG,KKG,IIO,JJO,KKO,IPZ,ICG,ICO,N
+            REAL(EB) :: FACE_VEL,Q0,Q1,Q2,Q3,PBAR_F,RSUM_F,RHO_G_2,RHO_OTHER,RHO_OTHER_2
+            REAL(EB) :: RHO_ZZ_F,RHO_ZZ_G,RHO_ZZ_G_2,RHO_ZZ_OTHER,RHO_ZZ_OTHER_2
+            LOGICAL :: SECOND_ORDER_INTERPOLATED_BOUNDARY
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > N_EXTERNAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE /= INTERPOLATED_BOUNDARY_IN) RETURN
+            IF (EXT_NOMD(IW) /= NOM_FILTER) RETURN
+
+            IOR = WALL_TOPO(IW)%IOR
+            II  = WALL_TOPO(IW)%II
+            JJ  = WALL_TOPO(IW)%JJ
+            KK  = WALL_TOPO(IW)%KK
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+            IPZ = WALL_PRESSURE_ZONED(IW)
+            IIO = EXT_IIOD(IW)
+            JJO = EXT_JJOD(IW)
+            KKO = EXT_KKOD(IW)
+
+            RHO_OTHER = RHOPD(II,JJ,KK)
+            RHO_OTHER_2 = RHO_OTHER
+            RHO_G_2 = WALL_RHO_GD(IW)
+            SECOND_ORDER_INTERPOLATED_BOUNDARY = .FALSE.
+            IF (ABS(EXT_AREA_RATIO(IW)-1._EB) < 0.01_EB) THEN
+                SELECT CASE(IOR)
+                    CASE( 1)
+                        ICG = CELL_INDEX_LOCAL(IIG+1,JJG,KKG)
+                        ICO = CELL_INDEX_OTHER(IIO-1,JJO,KKO)
+                    CASE(-1)
+                        ICG = CELL_INDEX_LOCAL(IIG-1,JJG,KKG)
+                        ICO = CELL_INDEX_OTHER(IIO+1,JJO,KKO)
+                    CASE( 2)
+                        ICG = CELL_INDEX_LOCAL(IIG,JJG+1,KKG)
+                        ICO = CELL_INDEX_OTHER(IIO,JJO-1,KKO)
+                    CASE(-2)
+                        ICG = CELL_INDEX_LOCAL(IIG,JJG-1,KKG)
+                        ICO = CELL_INDEX_OTHER(IIO,JJO+1,KKO)
+                    CASE( 3)
+                        ICG = CELL_INDEX_LOCAL(IIG,JJG,KKG+1)
+                        ICO = CELL_INDEX_OTHER(IIO,JJO,KKO-1)
+                    CASE(-3)
+                        ICG = CELL_INDEX_LOCAL(IIG,JJG,KKG-1)
+                        ICO = CELL_INDEX_OTHER(IIO,JJO,KKO+1)
+                    CASE DEFAULT
+                        RETURN
+                END SELECT
+                IF (.NOT.CELL_SOLID_LOCAL(ICG) .AND. .NOT.CELL_SOLID_OTHER(ICO)) &
+                    SECOND_ORDER_INTERPOLATED_BOUNDARY = .TRUE.
+            ENDIF
+
+            SELECT CASE(IOR)
+                CASE( 1)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG+1,JJG,KKG)
+                        RHO_OTHER_2 = OM_RHOP(IIO-1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_OTHER_2
+                    Q1 = RHO_OTHER
+                    Q2 = WALL_RHO_GD(IW)
+                    Q3 = RHO_G_2
+                    FACE_VEL = UUD(II,JJ,KK)
+                CASE(-1)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG-1,JJG,KKG)
+                        RHO_OTHER_2 = OM_RHOP(IIO+1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_G_2
+                    Q1 = WALL_RHO_GD(IW)
+                    Q2 = RHO_OTHER
+                    Q3 = RHO_OTHER_2
+                    FACE_VEL = UUD(II-1,JJ,KK)
+                CASE( 2)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG,JJG+1,KKG)
+                        RHO_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-1-OM_LB_J,KKO-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_OTHER_2
+                    Q1 = RHO_OTHER
+                    Q2 = WALL_RHO_GD(IW)
+                    Q3 = RHO_G_2
+                    FACE_VEL = VVD(II,JJ,KK)
+                CASE(-2)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG,JJG-1,KKG)
+                        RHO_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO+1-OM_LB_J,KKO-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_G_2
+                    Q1 = WALL_RHO_GD(IW)
+                    Q2 = RHO_OTHER
+                    Q3 = RHO_OTHER_2
+                    FACE_VEL = VVD(II,JJ-1,KK)
+                CASE( 3)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG,JJG,KKG+1)
+                        RHO_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-1-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_OTHER_2
+                    Q1 = RHO_OTHER
+                    Q2 = WALL_RHO_GD(IW)
+                    Q3 = RHO_G_2
+                    FACE_VEL = WWD(II,JJ,KK)
+                CASE(-3)
+                    IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                        RHO_G_2 = RHOPD(IIG,JJG,KKG-1)
+                        RHO_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO+1-OM_LB_K)
+                    ENDIF
+                    Q0 = RHO_G_2
+                    Q1 = WALL_RHO_GD(IW)
+                    Q2 = RHO_OTHER
+                    Q3 = RHO_OTHER_2
+                    FACE_VEL = WWD(II,JJ,KK-1)
+                CASE DEFAULT
+                    RETURN
+            END SELECT
+
+            WALL_RHO_FD(IW) = SCALAR_FACE_VALUE_LOCAL(FACE_VEL,Q0,Q1,Q2,Q3,I_FLUX_LIMITER_IN,TWO_EPSILON_EB_IN)
+
+            IF (N_TOTAL_SCALARS == 1) THEN
+                WALL_ZZ_FD(IW,1) = 1._EB
+            ELSE
+                DO N=1,N_TOTAL_SCALARS
+                    RHO_ZZ_G = WALL_RHO_GD(IW)*ZZPD(IIG,JJG,KKG,N)
+                    RHO_ZZ_G_2 = RHO_ZZ_G
+                    RHO_ZZ_OTHER = RHO_OTHER*ZZPD(II,JJ,KK,N)
+                    RHO_ZZ_OTHER_2 = RHO_ZZ_OTHER
+
+                    SELECT CASE(IOR)
+                        CASE( 1)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG+1,JJG,KKG)*ZZPD(IIG+1,JJG,KKG,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO-1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)* &
+                                                 OM_ZZP(IIO-1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_OTHER_2
+                            Q1 = RHO_ZZ_OTHER
+                            Q2 = RHO_ZZ_G
+                            Q3 = RHO_ZZ_G_2
+                        CASE(-1)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG-1,JJG,KKG)*ZZPD(IIG-1,JJG,KKG,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO+1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)* &
+                                                 OM_ZZP(IIO+1-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_G_2
+                            Q1 = RHO_ZZ_G
+                            Q2 = RHO_ZZ_OTHER
+                            Q3 = RHO_ZZ_OTHER_2
+                        CASE( 2)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG,JJG+1,KKG)*ZZPD(IIG,JJG+1,KKG,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-1-OM_LB_J,KKO-OM_LB_K)* &
+                                                 OM_ZZP(IIO-OM_LB_I,JJO-1-OM_LB_J,KKO-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_OTHER_2
+                            Q1 = RHO_ZZ_OTHER
+                            Q2 = RHO_ZZ_G
+                            Q3 = RHO_ZZ_G_2
+                        CASE(-2)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG,JJG-1,KKG)*ZZPD(IIG,JJG-1,KKG,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO+1-OM_LB_J,KKO-OM_LB_K)* &
+                                                 OM_ZZP(IIO-OM_LB_I,JJO+1-OM_LB_J,KKO-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_G_2
+                            Q1 = RHO_ZZ_G
+                            Q2 = RHO_ZZ_OTHER
+                            Q3 = RHO_ZZ_OTHER_2
+                        CASE( 3)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG,JJG,KKG+1)*ZZPD(IIG,JJG,KKG+1,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-1-OM_LB_K)* &
+                                                 OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-1-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_OTHER_2
+                            Q1 = RHO_ZZ_OTHER
+                            Q2 = RHO_ZZ_G
+                            Q3 = RHO_ZZ_G_2
+                        CASE(-3)
+                            IF (SECOND_ORDER_INTERPOLATED_BOUNDARY) THEN
+                                RHO_ZZ_G_2 = RHOPD(IIG,JJG,KKG-1)*ZZPD(IIG,JJG,KKG-1,N)
+                                RHO_ZZ_OTHER_2 = OM_RHOP(IIO-OM_LB_I,JJO-OM_LB_J,KKO+1-OM_LB_K)* &
+                                                 OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO+1-OM_LB_K,N)
+                            ENDIF
+                            Q0 = RHO_ZZ_G_2
+                            Q1 = RHO_ZZ_G
+                            Q2 = RHO_ZZ_OTHER
+                            Q3 = RHO_ZZ_OTHER_2
+                    END SELECT
+
+                    RHO_ZZ_F = SCALAR_FACE_VALUE_LOCAL(FACE_VEL,Q0,Q1,Q2,Q3,I_FLUX_LIMITER_IN,TWO_EPSILON_EB_IN)
+                    WALL_ZZ_FD(IW,N) = MAX(0._EB,MIN(1._EB,RHO_ZZ_F/WALL_RHO_FD(IW)))
+                ENDDO
+            ENDIF
+
+            SELECT CASE(IOR)
+                CASE(-3,3)
+                    PBAR_F = (PBAR_PD(KK,IPZ)*DZD_IN(KKG) + PBAR_PD(KKG,IPZ)*DZD_IN(KK)) / &
+                             (DZD_IN(KK)+DZD_IN(KKG))
+                CASE DEFAULT
+                    PBAR_F = PBAR_PD(KKG,IPZ)
+            END SELECT
+
+            RSUM_F = 0._EB
+            DO N=1,N_TRACKED_SPECIES
+                RSUM_F = RSUM_F + MWR_ZD_IN(N)*WALL_ZZ_FD(IW,N)
+            ENDDO
+            RSUM_F = R0D_IN*RSUM_F
+            WALL_TMP_FD(IW) = PBAR_F/(RSUM_F*WALL_RHO_FD(IW))
+            WALL_Q_CON_FD(IW) = 0._EB
+
+        END SUBROUTINE INTERPOLATED_RHO_F_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE INTERPOLATED_DIFFUSIVE_FLUX_VLES_GPU(N_EXTERNAL_WALL_CELLS,N_TRACKED_SPECIES, &
+            WALL_TOPO,EXT_NOMD,EXT_NICD,EXT_IIOD,EXT_JJOD,EXT_KKOD,EXT_IIOD_MAX,EXT_JJOD_MAX,EXT_KKOD_MAX,MUD,ZZPD, &
+            OM_MUD,OM_ZZP,WALL_RHO_D_DZDN_FD,DX_LOCAL,DY_LOCAL,DZ_LOCAL,DX_OTHER,DY_OTHER,DZ_OTHER,RDXN_OTHER, &
+            RDYN_OTHER,RDZN_OTHER,INTERPOLATED_BOUNDARY_IN,NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K,RSC_IN, &
+            IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK,WALL_LB,WALL_UB)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: N_EXTERNAL_WALL_CELLS,N_TRACKED_SPECIES,INTERPOLATED_BOUNDARY_IN
+            INTEGER, VALUE :: NOM_FILTER,OM_LB_I,OM_LB_J,OM_LB_K,IBP1,JBP1,KBP1,OM_NI,OM_NJ,OM_NK,WALL_LB,WALL_UB
+            INTEGER, DEVICE, DIMENSION(1:*) :: EXT_NOMD,EXT_NICD,EXT_IIOD,EXT_JJOD,EXT_KKOD
+            INTEGER, DEVICE, DIMENSION(1:*) :: EXT_IIOD_MAX,EXT_JJOD_MAX,EXT_KKOD_MAX
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: MUD
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:*) :: OM_MUD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+            REAL(EB), DEVICE, DIMENSION(0:OM_NI-1,0:OM_NJ-1,0:OM_NK-1,1:*) :: OM_ZZP
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_RHO_D_DZDN_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: DX_LOCAL,DY_LOCAL,DZ_LOCAL,DX_OTHER,DY_OTHER,DZ_OTHER
+            REAL(EB), DEVICE, DIMENSION(0:*) :: RDXN_OTHER,RDYN_OTHER,RDZN_OTHER
+            REAL(EB), VALUE :: RSC_IN
+
+            INTEGER :: IW,IOR,II,JJ,KK,IIG,JJG,KKG,IIO,JJO,KKO,N
+            REAL(EB) :: ARO,MU_G,MU_OTHER,RHO_D,RHO_D_DZDN,RHO_D_DZDN_OTHER
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > N_EXTERNAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE /= INTERPOLATED_BOUNDARY_IN) RETURN
+            IF (EXT_NOMD(IW) /= NOM_FILTER) RETURN
+            IF (EXT_NICD(IW) <= 1) RETURN
+
+            IOR = WALL_TOPO(IW)%IOR
+            II  = WALL_TOPO(IW)%II
+            JJ  = WALL_TOPO(IW)%JJ
+            KK  = WALL_TOPO(IW)%KK
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+            MU_G = MUD(IIG,JJG,KKG)
+
+            DO N=1,N_TRACKED_SPECIES
+                RHO_D_DZDN_OTHER = 0._EB
+                DO KKO=EXT_KKOD(IW),EXT_KKOD_MAX(IW)
+                    DO JJO=EXT_JJOD(IW),EXT_JJOD_MAX(IW)
+                        DO IIO=EXT_IIOD(IW),EXT_IIOD_MAX(IW)
+                            MU_OTHER = OM_MUD(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K)
+                            RHO_D = MAX(0._EB,0.5_EB*(MU_OTHER+MU_G))*RSC_IN
+                            SELECT CASE(IOR)
+                                CASE( 1)
+                                    ARO = DY_OTHER(JJO)*DZ_OTHER(KKO)/(DY_LOCAL(JJ)*DZ_LOCAL(KK))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDXN_OTHER(IIO)
+                                CASE(-1)
+                                    ARO = DY_OTHER(JJO)*DZ_OTHER(KKO)/(DY_LOCAL(JJ)*DZ_LOCAL(KK))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDXN_OTHER(IIO-1)
+                                CASE( 2)
+                                    ARO = DX_OTHER(IIO)*DZ_OTHER(KKO)/(DX_LOCAL(II)*DZ_LOCAL(KK))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDYN_OTHER(JJO)
+                                CASE(-2)
+                                    ARO = DX_OTHER(IIO)*DZ_OTHER(KKO)/(DX_LOCAL(II)*DZ_LOCAL(KK))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDYN_OTHER(JJO-1)
+                                CASE( 3)
+                                    ARO = DX_OTHER(IIO)*DY_OTHER(JJO)/(DX_LOCAL(II)*DY_LOCAL(JJ))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDZN_OTHER(KKO)
+                                CASE(-3)
+                                    ARO = DX_OTHER(IIO)*DY_OTHER(JJO)/(DX_LOCAL(II)*DY_LOCAL(JJ))
+                                    RHO_D_DZDN = RHO_D*(ZZPD(IIG,JJG,KKG,N)- &
+                                        OM_ZZP(IIO-OM_LB_I,JJO-OM_LB_J,KKO-OM_LB_K,N))*RDZN_OTHER(KKO-1)
+                                CASE DEFAULT
+                                    ARO = 0._EB
+                                    RHO_D_DZDN = 0._EB
+                            END SELECT
+                            RHO_D_DZDN_OTHER = RHO_D_DZDN_OTHER + ARO*RHO_D_DZDN
+                        ENDDO
+                    ENDDO
+                ENDDO
+                WALL_RHO_D_DZDN_FD(IW,N) = RHO_D_DZDN_OTHER
+            ENDDO
+
+        END SUBROUTINE INTERPOLATED_DIFFUSIVE_FLUX_VLES_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE WALL_BC_RHO_D_F_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, WALL_TOPO, MUD, RHOD, &
+            WALL_RHO_FD,WALL_RHO_GD,WALL_RHO_D_FD,RSC_IN,NULL_BOUNDARY_IN,OPEN_BOUNDARY_IN,INTERPOLATED_BOUNDARY_IN, &
+            IBP1,JBP1,WALL_LB,WALL_UB)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS, N_TRACKED_SPECIES
+            INTEGER, VALUE :: NULL_BOUNDARY_IN,OPEN_BOUNDARY_IN,INTERPOLATED_BOUNDARY_IN,IBP1,JBP1,WALL_LB,WALL_UB
+            REAL(EB), VALUE :: RSC_IN
+
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: MUD,RHOD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_RHO_FD, WALL_RHO_GD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_RHO_D_FD
+
+            INTEGER :: IW, N, IIG, JJG, KKG, BTYPE
+            REAL(EB) :: MU_G, RHO_G, FACTOR
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+
+            BTYPE = WALL_TOPO(IW)%BOUNDARY_TYPE
+            IF (BTYPE == NULL_BOUNDARY_IN) RETURN
+            IF (BTYPE == OPEN_BOUNDARY_IN) RETURN
+            IF (BTYPE == INTERPOLATED_BOUNDARY_IN) RETURN
+
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+
+            RHO_G = RHOD(IIG,JJG,KKG)
+            MU_G  = MUD(IIG,JJG,KKG)
+            WALL_RHO_GD(IW) = RHO_G
+
+            FACTOR = 0._EB
+            IF (ABS(RHO_G) > TWO_EPSILON_EB) FACTOR = MU_G*RSC_IN*WALL_RHO_FD(IW)/RHO_G
+            DO N=1,N_TRACKED_SPECIES
+                WALL_RHO_D_FD(IW,N) = FACTOR
+            ENDDO
+
+        END SUBROUTINE WALL_BC_RHO_D_F_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE WALL_SPECIFIED_MASS_FLUX_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, WALL_TOPO, &
+            WALL_SF_INDEXD, WALL_PRESSURE_ZONED, SF_SPECIES_BC_INDEXD, SF_MASS_FLUXD, SF_M_DOT_G_PP_ADJUST_FACD, &
+            SF_M_DOT_G_PP_ACTUAL_FACD, SF_RAMP_MF_INDEXD, SF_RAMP_MF_TAUD, WALL_T_IGND, WALL_BURN_DURATIOND, &
+            SF_N_QDOTPP_REFD,SF_N_THICK_REFD,SF_HRRPUA_INT_INDEXD,SF_QREF_INDEXD,SF_E2T_INDEXD,SF_THICK2QREFD, &
+            SF_HRRPUA_END_VALUED, &
+            SF_SPYRO_TH_FACTORD,SF_REFERENCE_HEAT_FLUX_TIME_INTERVALD,SF_MINIMUM_SCALING_HEAT_FLUXD, &
+            SF_MAXIMUM_SCALING_HEAT_FLUXD,WALL_Q_IN_SMOOTHD,WALL_Q_IN_SMOOTH_INTD,WALL_QDOTPP_INTD, &
+            WALL_Q_CON_FD,WALL_Q_RAD_IND,WALL_EMISSIVITYD,N_REACTIONS_IN, &
+            WALL_AREA_ADJUSTD, WALL_RDND, WALL_TMP_FD, WALL_RHO_FD, WALL_RHO_D_FD, WALL_ZZ_GD, WALL_ZZ_FD, &
+            WALL_M_DOT_G_PP_ADJUSTD, WALL_M_DOT_G_PP_ACTUALD, WALL_U_NORMALD, WALL_U_NORMAL_SD, PBARD_IN, MWR_ZD_IN, &
+            R0D_IN, NULL_BOUNDARY_IN, OPEN_BOUNDARY_IN, INTERPOLATED_BOUNDARY_IN, SOLID_BOUNDARY_IN, &
+            SPECIFIED_MASS_FLUX_IN, RAMP_T_MIND, RAMP_SPAND, RAMP_RDTD, RAMP_NPOINTSD, RAMP_OFFSETD, RAMP_INTERPD, T_IN, &
+            DT_IN,T_BEGIN_IN,INITIALIZATION_PHASE_FLAG,PREDICTOR_FLAG,SURF_LB,SURF_UB,WALL_LB,WALL_UB,KBP1)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TRACKED_SPECIES,N_REACTIONS_IN,SURF_LB,SURF_UB,WALL_LB,WALL_UB,KBP1
+            INTEGER, VALUE :: NULL_BOUNDARY_IN, OPEN_BOUNDARY_IN, INTERPOLATED_BOUNDARY_IN
+            INTEGER, VALUE :: SOLID_BOUNDARY_IN, SPECIFIED_MASS_FLUX_IN, INITIALIZATION_PHASE_FLAG, PREDICTOR_FLAG
+            REAL(EB), VALUE :: R0D_IN, T_IN, DT_IN, T_BEGIN_IN
+
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD, WALL_PRESSURE_ZONED
+            INTEGER, DEVICE, DIMENSION(0:*) :: SF_SPECIES_BC_INDEXD
+            INTEGER, DEVICE, DIMENSION(SURF_LB:SURF_UB,1:*) :: SF_RAMP_MF_INDEXD
+            INTEGER, DEVICE, DIMENSION(0:*) :: SF_N_QDOTPP_REFD,SF_N_THICK_REFD
+            INTEGER, DEVICE, DIMENSION(SURF_LB:SURF_UB,1:MAX_QDOTPP_REF) :: SF_HRRPUA_INT_INDEXD,SF_QREF_INDEXD,SF_E2T_INDEXD
+            INTEGER, DEVICE, DIMENSION(SURF_LB:SURF_UB,1:MAX_QDOTPP_REF,0:MAX_QDOTPP_REF) :: SF_THICK2QREFD
+            REAL(EB), DEVICE, DIMENSION(SURF_LB:SURF_UB,1:*) :: SF_MASS_FLUXD,SF_RAMP_MF_TAUD
+            REAL(EB), DEVICE, DIMENSION(SURF_LB:SURF_UB,1:MAX_QDOTPP_REF) :: SF_SPYRO_TH_FACTORD
+            REAL(EB), DEVICE, DIMENSION(SURF_LB:SURF_UB,1:MAX_QDOTPP_REF) :: SF_HRRPUA_END_VALUED
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_M_DOT_G_PP_ADJUST_FACD, SF_M_DOT_G_PP_ACTUAL_FACD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: SF_REFERENCE_HEAT_FLUX_TIME_INTERVALD,SF_MINIMUM_SCALING_HEAT_FLUXD, &
+                                               SF_MAXIMUM_SCALING_HEAT_FLUXD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_T_IGND, WALL_BURN_DURATIOND, WALL_AREA_ADJUSTD, WALL_RDND, WALL_TMP_FD, WALL_RHO_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_U_NORMALD,WALL_U_NORMAL_SD,WALL_Q_IN_SMOOTHD,WALL_Q_CON_FD, &
+                                               WALL_Q_RAD_IND,WALL_EMISSIVITYD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:MAX_QDOTPP_REF) :: WALL_Q_IN_SMOOTH_INTD,WALL_QDOTPP_INTD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_RHO_D_FD,WALL_ZZ_FD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_M_DOT_G_PP_ADJUSTD,WALL_M_DOT_G_PP_ACTUALD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(0:KBP1,0:*) :: PBARD_IN
+            REAL(EB), DEVICE, DIMENSION(*) :: MWR_ZD_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: RAMP_T_MIND, RAMP_SPAND, RAMP_RDTD
+            INTEGER, DEVICE, DIMENSION(0:*) :: RAMP_NPOINTSD, RAMP_OFFSETD
+            REAL(EB), DEVICE, DIMENSION(1:*) :: RAMP_INTERPD
+
+            INTEGER :: IW,SF_IDX,N,ITER,N_ZZ_MAX,KK,IPZ,NQ,NTHICK,IDX1,IDX2,RAMP_INDEX,E2T_RAMP,QREF_RAMP
+            REAL(EB) :: MFT,RHO_F_PREVIOUS,UN,DD,DENOM,RSUM_F,SUM_ZZ,TSI,RAMP_FACTOR,Q_INC,QDOTPP,QDOTPP1,QDOTPP2
+            REAL(EB) :: DT_SPYRO(MAX_QDOTPP_REF),T_SCALE(MAX_QDOTPP_REF),QDOTPP_REF(MAX_QDOTPP_REF), &
+                        Q_NEW(MAX_QDOTPP_REF),QDOTPP_T(MAX_QDOTPP_REF)
+            REAL(EB) :: ZZ_MAX, SUM_OTHER_SPECIES, M_DOT_ADJUST
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == NULL_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == OPEN_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == INTERPOLATED_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE /= SOLID_BOUNDARY_IN) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+            IF (SF_SPECIES_BC_INDEXD(SF_IDX) /= SPECIFIED_MASS_FLUX_IN) RETURN
+
+            QDOTPP = 0._EB
+            NQ = SF_N_QDOTPP_REFD(SF_IDX)
+            NTHICK = SF_N_THICK_REFD(SF_IDX)
+
+            ! S-Pyro: use the same incident-flux smoothing, integrated-energy
+            ! mapping, reference-flux interpolation and thickness scaling as
+            ! CALCULATE_ZZ_F on the CPU.
+            IF (NQ>0 .AND. N_REACTIONS_IN>=1 .AND. WALL_T_IGND(IW)<=T_IN .AND. PREDICTOR_FLAG==1) THEN
+                DO N=1,NTHICK
+                    DT_SPYRO(N) = DT_IN*SF_SPYRO_TH_FACTORD(SF_IDX,N)
+                ENDDO
+                TSI = MIN(T_IN-WALL_T_IGND(IW)+DT_IN,SF_REFERENCE_HEAT_FLUX_TIME_INTERVALD(SF_IDX)+DT_IN)
+                IF (WALL_EMISSIVITYD(IW)>0._EB) THEN
+                    Q_INC = WALL_Q_CON_FD(IW)+WALL_Q_RAD_IND(IW)/WALL_EMISSIVITYD(IW)
+                ELSE
+                    Q_INC = WALL_Q_CON_FD(IW)+WALL_Q_RAD_IND(IW)
+                ENDIF
+                WALL_Q_IN_SMOOTHD(IW) = (WALL_Q_IN_SMOOTHD(IW)*(TSI-DT_IN)+DT_IN*Q_INC)/TSI
+                WALL_Q_IN_SMOOTHD(IW) = MIN(MAX(SF_MINIMUM_SCALING_HEAT_FLUXD(SF_IDX),WALL_Q_IN_SMOOTHD(IW)), &
+                                                   SF_MAXIMUM_SCALING_HEAT_FLUXD(SF_IDX))
+                DO N=1,NTHICK
+                    WALL_Q_IN_SMOOTH_INTD(IW,N) = WALL_Q_IN_SMOOTH_INTD(IW,N) + &
+                        DT_SPYRO(N)*WALL_Q_IN_SMOOTHD(IW)
+                ENDDO
+
+                DO N=1,NTHICK
+                    DO IDX1=1,SF_THICK2QREFD(SF_IDX,N,0)
+                        NQ = SF_THICK2QREFD(SF_IDX,N,IDX1)
+                        RAMP_INDEX = SF_HRRPUA_INT_INDEXD(SF_IDX,NQ)
+                        QREF_RAMP = SF_QREF_INDEXD(SF_IDX,NQ)
+                        E2T_RAMP = SF_E2T_INDEXD(SF_IDX,NQ)
+                        T_SCALE(NQ) = INTERPOLATE1D_UNIFORM_DEVICE(E2T_RAMP, &
+                            WALL_Q_IN_SMOOTH_INTD(IW,N)*RAMP_RDTD(E2T_RAMP),RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+                        QDOTPP_REF(NQ) = INTERPOLATE1D_UNIFORM_DEVICE(QREF_RAMP,T_SCALE(NQ)*RAMP_RDTD(QREF_RAMP), &
+                            RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+                        IF (WALL_Q_IN_SMOOTH_INTD(IW,N)>=RAMP_T_MIND(E2T_RAMP)+RAMP_SPAND(E2T_RAMP)) THEN
+                            Q_NEW(NQ) = WALL_QDOTPP_INTD(IW,NQ) + DT_SPYRO(N)*SF_HRRPUA_END_VALUED(SF_IDX,NQ)* &
+                                WALL_Q_IN_SMOOTHD(IW)/QDOTPP_REF(NQ)
+                        ELSE
+                            Q_NEW(NQ) = INTERPOLATE1D_UNIFORM_DEVICE(RAMP_INDEX,T_SCALE(NQ)*RAMP_RDTD(RAMP_INDEX), &
+                                RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+                        ENDIF
+                    ENDDO
+                ENDDO
+
+                DO N=1,NTHICK
+                    IDX1 = SF_THICK2QREFD(SF_IDX,N,1)
+                    IDX2 = SF_THICK2QREFD(SF_IDX,N,SF_THICK2QREFD(SF_IDX,N,0))
+                    IF (WALL_Q_IN_SMOOTHD(IW)<=QDOTPP_REF(IDX1)) THEN
+                        QDOTPP_T(N) = MAX(0._EB,(Q_NEW(IDX1)-WALL_QDOTPP_INTD(IW,IDX1))/DT_SPYRO(N))
+                    ELSEIF (WALL_Q_IN_SMOOTHD(IW)>QDOTPP_REF(IDX2)) THEN
+                        QDOTPP_T(N) = MAX(0._EB,(Q_NEW(IDX2)-WALL_QDOTPP_INTD(IW,IDX2))/DT_SPYRO(N))
+                    ELSE
+                        DO NQ=IDX1+1,IDX2
+                            IF (WALL_Q_IN_SMOOTHD(IW)<=QDOTPP_REF(NQ)) THEN
+                                QDOTPP1 = MAX(0._EB,(Q_NEW(NQ-1)-WALL_QDOTPP_INTD(IW,NQ-1))/DT_SPYRO(N))
+                                QDOTPP2 = MAX(0._EB,(Q_NEW(NQ)-WALL_QDOTPP_INTD(IW,NQ))/DT_SPYRO(N))
+                                QDOTPP_T(N) = QDOTPP1+(QDOTPP2-QDOTPP1)* &
+                                    (WALL_Q_IN_SMOOTHD(IW)-QDOTPP_REF(NQ-1))/(QDOTPP_REF(NQ)-QDOTPP_REF(NQ-1))
+                                EXIT
+                            ENDIF
+                        ENDDO
+                    ENDIF
+                ENDDO
+
+                IF (SF_SPYRO_TH_FACTORD(SF_IDX,1)>=1._EB) THEN
+                    QDOTPP = QDOTPP_T(1)
+                ELSEIF (SF_SPYRO_TH_FACTORD(SF_IDX,NTHICK)<=1._EB) THEN
+                    QDOTPP = QDOTPP_T(NTHICK)
+                ELSE
+                    DO N=2,NTHICK
+                        IF (SF_SPYRO_TH_FACTORD(SF_IDX,N)>1._EB) THEN
+                            QDOTPP = QDOTPP_T(N-1)+(QDOTPP_T(N)-QDOTPP_T(N-1))* &
+                                (1._EB-SF_SPYRO_TH_FACTORD(SF_IDX,N-1))/ &
+                                (SF_SPYRO_TH_FACTORD(SF_IDX,N)-SF_SPYRO_TH_FACTORD(SF_IDX,N-1))
+                            EXIT
+                        ENDIF
+                    ENDDO
+                ENDIF
+                DO NQ=1,SF_N_QDOTPP_REFD(SF_IDX)
+                    WALL_QDOTPP_INTD(IW,NQ) = Q_NEW(NQ)
+                ENDDO
+            ENDIF
+
+            IF (T_IN < WALL_T_IGND(IW) .OR. WALL_T_IGND(IW)+WALL_BURN_DURATIOND(IW) < T_IN .OR. &
+                INITIALIZATION_PHASE_FLAG /= 0) THEN
+                DO N=1,N_TRACKED_SPECIES
+                    WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                    WALL_M_DOT_G_PP_ADJUSTD(IW,N) = 0._EB
+                    WALL_M_DOT_G_PP_ACTUALD(IW,N) = 0._EB
+                ENDDO
+                IF (PREDICTOR_FLAG == 1) THEN
+                    WALL_U_NORMAL_SD(IW) = 0._EB
+                ELSE
+                    WALL_U_NORMALD(IW) = 0._EB
+                ENDIF
+                RETURN
+            ENDIF
+
+            MFT = 0._EB
+            DO N=1,N_TRACKED_SPECIES
+                IF (ABS(SF_MASS_FLUXD(SF_IDX,N)) > TWO_EPSILON_EB) THEN
+                    IF (SF_N_QDOTPP_REFD(SF_IDX)>0 .AND. N_REACTIONS_IN>=1) THEN
+                        IF (PREDICTOR_FLAG==1) THEN
+                            IF (WALL_T_IGND(IW)<=T_IN) THEN
+                                WALL_M_DOT_G_PP_ACTUALD(IW,N) = QDOTPP*SF_MASS_FLUXD(SF_IDX,N)
+                            ELSE
+                                WALL_M_DOT_G_PP_ACTUALD(IW,N) = 0._EB
+                            ENDIF
+                        ENDIF
+                    ELSE
+                        IF (ABS(WALL_T_IGND(IW)-T_BEGIN_IN) < SPACING(WALL_T_IGND(IW)) .AND. SF_RAMP_MF_INDEXD(SF_IDX,N)>=1) THEN
+                            IF (PREDICTOR_FLAG == 1) THEN
+                                TSI = T_IN + DT_IN
+                            ELSE
+                                TSI = T_IN
+                            ENDIF
+                        ELSE
+                            IF (PREDICTOR_FLAG == 1) THEN
+                                TSI = T_IN + DT_IN - WALL_T_IGND(IW)
+                            ELSE
+                                TSI = T_IN - WALL_T_IGND(IW)
+                            ENDIF
+                        ENDIF
+                        RAMP_FACTOR = EVALUATE_RAMP_DEVICE(TSI,SF_RAMP_MF_INDEXD(SF_IDX,N),SF_RAMP_MF_TAUD(SF_IDX,N), &
+                                                           RAMP_T_MIND,RAMP_SPAND,RAMP_RDTD,RAMP_NPOINTSD,RAMP_OFFSETD,RAMP_INTERPD)
+                        WALL_M_DOT_G_PP_ACTUALD(IW,N) = RAMP_FACTOR*SF_MASS_FLUXD(SF_IDX,N)
+                    ENDIF
+                ELSE
+                    WALL_M_DOT_G_PP_ACTUALD(IW,N) = 0._EB
+                ENDIF
+                WALL_M_DOT_G_PP_ADJUSTD(IW,N) = WALL_M_DOT_G_PP_ACTUALD(IW,N)*SF_M_DOT_G_PP_ADJUST_FACD(SF_IDX)* &
+                                                WALL_AREA_ADJUSTD(IW)
+                WALL_M_DOT_G_PP_ACTUALD(IW,N) = WALL_M_DOT_G_PP_ACTUALD(IW,N)*SF_M_DOT_G_PP_ACTUAL_FACD(SF_IDX)
+                MFT = MFT + WALL_M_DOT_G_PP_ADJUSTD(IW,N)
+            ENDDO
+
+            IF (ABS(MFT) <= TWO_EPSILON_EB) THEN
+                DO N=1,N_TRACKED_SPECIES
+                    WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                    WALL_M_DOT_G_PP_ADJUSTD(IW,N) = 0._EB
+                    WALL_M_DOT_G_PP_ACTUALD(IW,N) = 0._EB
+                ENDDO
+                IF (PREDICTOR_FLAG == 1) THEN
+                    WALL_U_NORMAL_SD(IW) = 0._EB
+                ELSE
+                    WALL_U_NORMALD(IW) = 0._EB
+                ENDIF
+                RETURN
+            ENDIF
+
+            KK = WALL_TOPO(IW)%KK
+            IPZ = WALL_PRESSURE_ZONED(IW)
+            RHO_F_PREVIOUS = WALL_RHO_FD(IW)
+            UN = 0._EB
+
+            DO ITER=1,3
+                IF (ABS(WALL_RHO_FD(IW)) > TWO_EPSILON_EB) UN = MFT/WALL_RHO_FD(IW)
+
+                DO N=1,N_TRACKED_SPECIES
+                    IF (ABS(RHO_F_PREVIOUS) > TWO_EPSILON_EB) THEN
+                        WALL_RHO_D_FD(IW,N) = WALL_RHO_D_FD(IW,N)*WALL_RHO_FD(IW)/RHO_F_PREVIOUS
+                    ENDIF
+                    DD = 2._EB*WALL_RHO_D_FD(IW,N)*WALL_RDND(IW)
+                    DENOM = DD + UN*WALL_RHO_FD(IW)
+                    M_DOT_ADJUST = WALL_M_DOT_G_PP_ADJUSTD(IW,N)
+                    IF (ABS(DENOM) > TWO_EPSILON_EB) THEN
+                        WALL_ZZ_FD(IW,N) = (M_DOT_ADJUST + DD*WALL_ZZ_GD(IW,N))/DENOM
+                    ELSE
+                        WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                    ENDIF
+                ENDDO
+
+                N_ZZ_MAX = 1
+                ZZ_MAX = MAX(0._EB,MIN(1._EB,WALL_ZZ_FD(IW,1)))
+                SUM_ZZ = ZZ_MAX
+                WALL_ZZ_FD(IW,1) = ZZ_MAX
+                DO N=2,N_TRACKED_SPECIES
+                    WALL_ZZ_FD(IW,N) = MAX(0._EB,MIN(1._EB,WALL_ZZ_FD(IW,N)))
+                    SUM_ZZ = SUM_ZZ + WALL_ZZ_FD(IW,N)
+                    IF (WALL_ZZ_FD(IW,N) > ZZ_MAX) THEN
+                        ZZ_MAX = WALL_ZZ_FD(IW,N)
+                        N_ZZ_MAX = N
+                    ENDIF
+                ENDDO
+                SUM_OTHER_SPECIES = SUM_ZZ - WALL_ZZ_FD(IW,N_ZZ_MAX)
+                WALL_ZZ_FD(IW,N_ZZ_MAX) = 1._EB - SUM_OTHER_SPECIES
+
+                RSUM_F = 0._EB
+                DO N=1,N_TRACKED_SPECIES
+                    RSUM_F = RSUM_F + MWR_ZD_IN(N)*MAX(0._EB,WALL_ZZ_FD(IW,N))
+                ENDDO
+                RSUM_F = R0D_IN*RSUM_F
+                RHO_F_PREVIOUS = WALL_RHO_FD(IW)
+                WALL_RHO_FD(IW) = PBARD_IN(KK,IPZ)/(RSUM_F*WALL_TMP_FD(IW))
+            ENDDO
+
+            IF (PREDICTOR_FLAG == 1) THEN
+                WALL_U_NORMAL_SD(IW) = -UN
+            ELSE
+                WALL_U_NORMALD(IW) = -UN
+            ENDIF
+
+        END SUBROUTINE WALL_SPECIFIED_MASS_FLUX_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE WALL_RHO_F_RHOP_GPU(TOTAL_WALL_CELLS, N_TRACKED_SPECIES, N_EXTERNAL_WALL_CELLS, &
+            WALL_TOPO, WALL_SF_INDEXD, WALL_PRESSURE_ZONED, WALL_U_NORMALD, WALL_U_NORMAL_SD, SF_ADIABATICD, &
+            SF_THERMAL_BC_INDEXD, SF_SPECIES_BC_INDEXD, CELL_INDEXD, CELL_SOLIDD, WALL_TMP_GD, WALL_RHO_GD, WALL_TMP_FD, &
+            WALL_RHO_FD, WALL_ZZ_GD, WALL_ZZ_FD, PBARD_IN, RHOPD, TMPD, ZZPD, RSUMD, MWR_ZD_IN, R0D_IN, NULL_BOUNDARY_IN, &
+            OPEN_BOUNDARY_IN, INTERPOLATED_BOUNDARY_IN, INFLOW_OUTFLOW_IN, SOLID_BOUNDARY_IN, SPECIFIED_MASS_FLUX_IN, &
+            PREDICTOR_FLAG,IBP1,JBP1,KBP1,WALL_LB,WALL_UB)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS, N_TRACKED_SPECIES, N_EXTERNAL_WALL_CELLS
+            INTEGER, VALUE :: NULL_BOUNDARY_IN, OPEN_BOUNDARY_IN, INTERPOLATED_BOUNDARY_IN, INFLOW_OUTFLOW_IN
+            INTEGER, VALUE :: SOLID_BOUNDARY_IN,SPECIFIED_MASS_FLUX_IN,PREDICTOR_FLAG,IBP1,JBP1,KBP1,WALL_LB,WALL_UB
+
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_PRESSURE_ZONED
+            INTEGER, DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: CELL_INDEXD
+            LOGICAL, DEVICE, DIMENSION(0:*) :: CELL_SOLIDD
+            LOGICAL, DEVICE, DIMENSION(0:*) :: SF_ADIABATICD
+            INTEGER, DEVICE, DIMENSION(0:*) :: SF_THERMAL_BC_INDEXD, SF_SPECIES_BC_INDEXD
+
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_TMP_GD, WALL_RHO_GD, WALL_TMP_FD, WALL_RHO_FD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_U_NORMALD, WALL_U_NORMAL_SD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_ZZ_FD
+            REAL(EB), DEVICE, DIMENSION(0:KBP1,0:*) :: PBARD_IN
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: RHOPD,TMPD,RSUMD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:KBP1,1:*) :: ZZPD
+            REAL(EB), DEVICE, DIMENSION(*) :: MWR_ZD_IN
+            REAL(EB), VALUE :: R0D_IN
+
+            INTEGER :: IW, N, II, JJ, KK, IIG, JJG, KKG, IPZ, SF_IDX, IC, ICG
+            REAL(EB) :: RSUM_F, RHO_F_LOCAL, UN_P
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == NULL_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == INTERPOLATED_BOUNDARY_IN) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+
+            KK = WALL_TOPO(IW)%KK
+            IPZ = WALL_PRESSURE_ZONED(IW)
+
+            IF (SF_SPECIES_BC_INDEXD(SF_IDX) == SPECIFIED_MASS_FLUX_IN) THEN
+                RHO_F_LOCAL = WALL_RHO_FD(IW)
+                RSUM_F = 0._EB
+                DO N = 1, N_TRACKED_SPECIES
+                    RSUM_F = RSUM_F + MWR_ZD_IN(N)*MAX(0._EB,WALL_ZZ_FD(IW,N))
+                ENDDO
+                RSUM_F = R0D_IN*RSUM_F
+            ELSE
+                RSUM_F = 0._EB
+                DO N = 1, N_TRACKED_SPECIES
+                    RSUM_F = RSUM_F + MWR_ZD_IN(N)*MAX(0._EB,WALL_ZZ_FD(IW,N))
+                ENDDO
+                RSUM_F = R0D_IN*RSUM_F
+                RHO_F_LOCAL = PBARD_IN(KK,IPZ)/(RSUM_F*WALL_TMP_FD(IW))
+            ENDIF
+
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == SOLID_BOUNDARY_IN) THEN
+                IF (PREDICTOR_FLAG == 1) THEN
+                    UN_P = WALL_U_NORMAL_SD(IW)
+                ELSE
+                    UN_P = WALL_U_NORMALD(IW)
+                ENDIF
+                IF (UN_P > 0._EB) THEN
+                    DO N = 1, N_TRACKED_SPECIES
+                        WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                    ENDDO
+                    RHO_F_LOCAL = WALL_RHO_GD(IW)
+                    RSUM_F = 0._EB
+                    DO N = 1, N_TRACKED_SPECIES
+                        RSUM_F = RSUM_F + MWR_ZD_IN(N)*MAX(0._EB,WALL_ZZ_FD(IW,N))
+                    ENDDO
+                    RSUM_F = R0D_IN*RSUM_F
+                ENDIF
+            ENDIF
+
+            WALL_RHO_FD(IW) = RHO_F_LOCAL
+
+            IF (IW <= N_EXTERNAL_WALL_CELLS .AND. &
+                WALL_TOPO(IW)%BOUNDARY_TYPE /= OPEN_BOUNDARY_IN .AND. &
+                WALL_TOPO(IW)%BOUNDARY_TYPE /= INTERPOLATED_BOUNDARY_IN) THEN
+                II = WALL_TOPO(IW)%II
+                JJ = WALL_TOPO(IW)%JJ
+                KK = WALL_TOPO(IW)%KK
+                RHOPD(II,JJ,KK) = 2._EB*RHO_F_LOCAL - WALL_RHO_GD(IW)
+            ELSEIF (IW <= N_EXTERNAL_WALL_CELLS .AND. &
+                    SF_THERMAL_BC_INDEXD(SF_IDX) == INFLOW_OUTFLOW_IN) THEN
+                II = WALL_TOPO(IW)%II
+                JJ = WALL_TOPO(IW)%JJ
+                KK = WALL_TOPO(IW)%KK
+                TMPD(II,JJ,KK) = WALL_TMP_FD(IW)
+                RHOPD(II,JJ,KK) = RHO_F_LOCAL
+                RSUMD(II,JJ,KK) = RSUM_F
+                DO N = 1, N_TRACKED_SPECIES
+                    ZZPD(II,JJ,KK,N) = WALL_ZZ_FD(IW,N)
+                ENDDO
+            ENDIF
+
+            II  = WALL_TOPO(IW)%II
+            JJ  = WALL_TOPO(IW)%JJ
+            KK  = WALL_TOPO(IW)%KK
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+            IC  = CELL_INDEXD(II,JJ,KK)
+            ICG = CELL_INDEXD(IIG,JJG,KKG)
+            IF (IW <= N_EXTERNAL_WALL_CELLS .AND. WALL_TOPO(IW)%BOUNDARY_TYPE /= OPEN_BOUNDARY_IN .AND. &
+                .NOT.CELL_SOLIDD(IC) .AND. .NOT.CELL_SOLIDD(ICG)) THEN
+                DO N = 1, N_TRACKED_SPECIES
+                    ZZPD(II,JJ,KK,N) = 2._EB*WALL_ZZ_FD(IW,N) - WALL_ZZ_GD(IW,N)
+                ENDDO
+            ENDIF
+
+        END SUBROUTINE WALL_RHO_F_RHOP_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE UPDATE_WALL_ZZ_F_GPU(TOTAL_WALL_CELLS, N_TOTAL_SCALARS, N_TRACKED_SPECIES, WALL_TOPO, &
+            WALL_SF_INDEXD, SF_SPECIES_BC_INDEXD, SF_MASS_FRACTIOND, WALL_U_NORMAL_SD, WALL_ZZ_GD, WALL_ZZ_FD, &
+            UUD, VVD, WWD, WALL_RHO_FD, WALL_RHO_D_DZDN_FD, WALL_M_DOT_G_PP_ADJUSTD, WALL_M_DOT_G_PP_ACTUALD, &
+            NULL_BOUNDARY_IN,OPEN_BOUNDARY_IN,INTERPOLATED_BOUNDARY_IN,SPECIFIED_MASS_FRACTION_IN, &
+            SURF_LB,SURF_UB,WALL_LB,WALL_UB,IBP1,JBP1,KBP1)
+
+            IMPLICIT NONE
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+
+            INTEGER, VALUE :: TOTAL_WALL_CELLS,N_TOTAL_SCALARS,N_TRACKED_SPECIES,SURF_LB,SURF_UB,WALL_LB,WALL_UB
+            INTEGER, VALUE :: IBP1,JBP1,KBP1
+            INTEGER, VALUE :: NULL_BOUNDARY_IN, OPEN_BOUNDARY_IN, INTERPOLATED_BOUNDARY_IN, SPECIFIED_MASS_FRACTION_IN
+            INTEGER, DEVICE, DIMENSION(0:*) :: WALL_SF_INDEXD, SF_SPECIES_BC_INDEXD
+            REAL(EB), DEVICE, DIMENSION(SURF_LB:SURF_UB,1:*) :: SF_MASS_FRACTIOND
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_U_NORMAL_SD
+            REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: UUD,VVD,WWD
+            REAL(EB), DEVICE, DIMENSION(1:TOTAL_WALL_CELLS,1:*) :: WALL_ZZ_GD
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_RHO_FD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_ZZ_FD,WALL_RHO_D_DZDN_FD
+            REAL(EB), DEVICE, DIMENSION(WALL_LB:WALL_UB,1:*) :: WALL_M_DOT_G_PP_ADJUSTD,WALL_M_DOT_G_PP_ACTUALD
+
+            INTEGER :: IW, N, SF_IDX, IOR, IIG, JJG, KKG
+            REAL(EB) :: SUM_OTHER_SPECIES, UN
+
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IW < 1 .OR. IW > TOTAL_WALL_CELLS) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == NULL_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == OPEN_BOUNDARY_IN) RETURN
+            IF (WALL_TOPO(IW)%BOUNDARY_TYPE == INTERPOLATED_BOUNDARY_IN) RETURN
+
+            SF_IDX = WALL_SF_INDEXD(IW)
+
+            DO N=1,N_TOTAL_SCALARS
+                WALL_ZZ_FD(IW,N) = 0._EB
+            ENDDO
+
+            IF (SF_SPECIES_BC_INDEXD(SF_IDX) == SPECIFIED_MASS_FRACTION_IN .AND. WALL_U_NORMAL_SD(IW) < 0._EB) THEN
+                SUM_OTHER_SPECIES = 0._EB
+                DO N=2,MIN(N_TOTAL_SCALARS,N_TRACKED_SPECIES)
+                    WALL_ZZ_FD(IW,N) = MAX(0._EB,MIN(1._EB,SF_MASS_FRACTIOND(SF_IDX,N)))
+                    SUM_OTHER_SPECIES = SUM_OTHER_SPECIES + WALL_ZZ_FD(IW,N)
+                ENDDO
+                IF (N_TRACKED_SPECIES >= 1) WALL_ZZ_FD(IW,1) = 1._EB - SUM_OTHER_SPECIES
+            ELSE
+                DO N=1,MIN(N_TOTAL_SCALARS,N_TRACKED_SPECIES)
+                    WALL_ZZ_FD(IW,N) = WALL_ZZ_GD(IW,N)
+                ENDDO
+            ENDIF
+
+            IF (SF_SPECIES_BC_INDEXD(SF_IDX) /= SPECIFIED_MASS_FRACTION_IN) RETURN
+
+            IOR = WALL_TOPO(IW)%IOR
+            IIG = WALL_TOPO(IW)%IIG
+            JJG = WALL_TOPO(IW)%JJG
+            KKG = WALL_TOPO(IW)%KKG
+            SELECT CASE(IOR)
+                CASE( 1); UN = UUD(IIG-1,JJG  ,KKG  )
+                CASE(-1); UN = UUD(IIG  ,JJG  ,KKG  )
+                CASE( 2); UN = VVD(IIG  ,JJG-1,KKG  )
+                CASE(-2); UN = VVD(IIG  ,JJG  ,KKG  )
+                CASE( 3); UN = WWD(IIG  ,JJG  ,KKG-1)
+                CASE(-3); UN = WWD(IIG  ,JJG  ,KKG  )
+                CASE DEFAULT; RETURN
+            END SELECT
+
+            DO N=1,N_TRACKED_SPECIES
+                WALL_M_DOT_G_PP_ADJUSTD(IW,N) = SIGN(1._EB,REAL(IOR,EB))* &
+                    (WALL_RHO_FD(IW)*WALL_ZZ_FD(IW,N)*UN-WALL_RHO_D_DZDN_FD(IW,N))
+                WALL_M_DOT_G_PP_ACTUALD(IW,N) = WALL_M_DOT_G_PP_ADJUSTD(IW,N)
+            ENDDO
+        END SUBROUTINE UPDATE_WALL_ZZ_F_GPU
+END MODULE G_WALL

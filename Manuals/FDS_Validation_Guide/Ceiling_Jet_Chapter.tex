@@ -1,0 +1,1835 @@
+% !TEX root = FDS_Validation_Guide.tex
+
+\chapter{Ceiling Jets and Device Activation}
+
+FDS is a CFD-based fire model and has no specific ceiling jet algorithm. Rather, temperatures throughout the fire compartment are computed directly from the governing conservation equations. Nevertheless, temperature measurements near the ceiling are useful in evaluating the model's ability to predict the activation times of sprinklers, smoke detectors, and other fire protection devices. The term ``ceiling jet'' is used loosely here -- it distinguishes a point temperature measurement near the ceiling from an average ``hot gas layer'' (HGL) temperature.
+
+This chapter first presents comparisons of model predictions and temperature measurements near to the ceiling. Next, predicted sprinkler activation times and the total number of activations are compared with measurements. Finally, predicted smoke detector activation times are compared with measurements.
+
+\section{Ceiling Jet Temperatures}
+
+The ceiling jet temperature measurements presented in this section were made for a variety of reasons. Most often, these measurements were simply the upper most thermocouple temperature in a vertical array. Sometimes, these measurements were designed to detect the activation time of a sprinkler. In any case, these measurements are used to evaluate the model's ability to predict the gas temperature at a single point, as opposed to the hot gas layer average.
+
+\clearpage
+
+\subsection{ATF Corridors Experiment}
+
+This series of experiments involved two fairly long corridors connected by a staircase. The fire, a natural gas sand burner, was located on the first level at the end of the corridor away from the stairwell. The corridor was closed at this end, and open at the same position on the
+second level. Two-way flow occurred on both levels because make-up air flowed from the opening on the second level down
+the stairs to the first. The only opening to the enclosure was the open end of the second-level corridor.
+
+Temperatures were measured with seven thermocouple trees. Tree A was located fairly close to the fire on the first level. Tree~B
+was located halfway down the first-level corridor. Tree~C was close to the stairwell entrance on the first level. Tree~D was located
+in the doorway of the stairwell on the first level. Tree~E was located roughly along the vertical centerline of the
+stairwell. Tree~F was located near the stairwell opening on the second level. Tree~G was located near the exit at the
+other end of the second-level corridor. The graphs on the following pages show the top and bottom TC from each tree for
+the given fire sizes of 50~kW, 100~kW, 250~kW, 500~kW, and a mixed HRR ``pulsed'' fire.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_A_050_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_B_050_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_C_050_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_D_050_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_E_050_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_F_050_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_G_050_kW} &
+\end{tabular*}
+\caption[ATF Corridors experiments, ceiling jet, 50 kW]
+{ATF Corridors experiments, ceiling jet, 50 kW.}
+\label{ATF_Corridors_Jet_Temp_50_kW}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_A_100_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_B_100_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_C_100_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_D_100_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_E_100_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_F_100_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_G_100_kW} &
+\end{tabular*}
+\caption[ATF Corridors experiments, ceiling jet, 100 kW]
+{ATF Corridors experiments, ceiling jet, 100 kW.}
+\label{ATF_Corridors_Jet_Temp_100_kW}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_A_250_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_B_250_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_C_250_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_D_250_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_E_250_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_F_250_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_G_250_kW} &
+\end{tabular*}
+\caption[ATF Corridors experiments, ceiling jet, 250 kW]
+{ATF Corridors experiments, ceiling jet, 250 kW.}
+\label{ATF_Corridors_Jet_Temp_250_kW}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_A_500_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_B_500_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_C_500_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_D_500_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_E_500_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_F_500_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_G_500_kW} &
+\end{tabular*}
+\caption[ATF Corridors experiments, ceiling jet, 500 kW]
+{ATF Corridors experiments, ceiling jet, 500 kW.}
+\label{ATF_Corridors_Jet_Temp_500_kW}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_A_Mix_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_B_Mix_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_C_Mix_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_D_Mix_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_E_Mix_kW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_F_Mix_kW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/ATF_Corridors/ATF_Corridors_Jet_Temp_G_Mix_kW} &
+\end{tabular*}
+\caption[ATF Corridors experiments, ceiling jet, mixed HRR]
+{ATF Corridors experiments, ceiling jet, mixed HRR.}
+\label{ATF_Corridors_Jet_Temp_Mix_kW}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Arup Tunnel Experiments}
+
+The plots below show the predicted and measured temperatures from a fire experiment conducted in a tunnel. Near-ceiling temperatures were measured at distances of 2~m, 4~m, 6~m and 8~m from the fire along the centerline of tunnel.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Arup_Tunnel/Arup_Tunnel_2_m} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Arup_Tunnel/Arup_Tunnel_4_m} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Arup_Tunnel/Arup_Tunnel_6_m} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Arup_Tunnel/Arup_Tunnel_8_m}
+\end{tabular*}
+\caption[Arup Tunnel experiments, ceiling jet]
+{Arup Tunnel experiments, ceiling jet.}
+\label{Arup_Tunnel}
+\end{figure}
+
+\clearpage
+
+\subsection{DelCo Trainers}
+
+The plots below and on the following pages display comparisons of ceiling jet temperatures for the DelCo Trainer experiments. Tests~2-6 were conducted in a single level house mock-up with three rooms adjacent to one another. Locations A1 and A2 were in the fire room, A3 was in an adjacent room, and A4 and A5 were in a room next to the adjacent room. Tests~22-25 were conducted in a two level house mock-up. Locations A1, A2, and A3 were 2~cm below the ceiling of the first level, and A7, A8, and A9 were 2~cm below the ceiling of the second level. See Sec.~\ref{DelCo_Description} for their exact locations.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_02_A1_A3_A5_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_02_A2_A4_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_03_A1_A3_A5_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_03_A2_A4_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_04_A1_A3_A5_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_04_A2_A4_Ceiling_Jet}
+\end{tabular*}
+\caption[DelCo Trainers, ceiling jet temperature, Tests 2-4]
+{DelCo Trainers, ceiling jet temperature, Tests 2-4.}
+\label{DelCo_Ceiling_Jet_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_05_A1_A3_A5_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_05_A2_A4_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_06_A1_A3_A5_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_06_A2_A4_Ceiling_Jet}
+\end{tabular*}
+\caption[DelCo Trainers, ceiling jet temperature, Tests 5 and 6]
+{DelCo Trainers, ceiling jet temperature, Tests 5 and 6.}
+\label{DelCo_Ceiling_Jet_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_22_A1_A2_A3_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_22_A7_A8_A9_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_23_A1_A2_A3_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_23_A7_A8_A9_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_24_A1_A2_A3_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_24_A7_A8_A9_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_25_A1_A2_A3_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/DelCo_Trainers/Test_25_A7_A8_A9_Ceiling_Jet}
+\end{tabular*}
+\caption[DelCo Trainers, ceiling jet temperature, Tests 22-25]
+{DelCo Trainers, ceiling jet temperature, Tests 22-25.}
+\label{DelCo_Ceiling_Jet_3}
+\end{figure}
+
+\clearpage
+
+\subsection{FAA Cargo Compartments}
+
+Figure~\ref{FAA_Cargo_probe_locations} displays the locations of the near-ceiling thermocouples in the Boeing~707 compartment. The TCs were positioned approximately 4~cm below the ceiling. The small numbered squares indicate the fire locations for Tests 1, 2 and 3.
+
+\begin{figure}[!h]
+\begin{center}
+\setlength{\unitlength}{1.0in}
+\begin{picture}(3.18,6.73)(-1.59,0)
+
+\put(-1.59,0.){\framebox(3.18,6.73){ }}
+
+\put( 0.03,3.68){\framebox(0.10,0.10){\tiny 1}}
+\put( 0.38,0.23){\framebox(0.10,0.10){\tiny 2}}
+\put( 0.38,1.75){\framebox(0.10,0.10){\tiny 3}}
+
+\put(-1.37,0.17){\circle*{0.05}}
+\put(-1.32,0.14){1}
+\put(-0.46,0.17){\circle*{0.05}}
+\put(-0.41,0.14){2}
+\put(-0.00,0.17){\circle*{0.05}}
+\put( 0.05,0.14){3}
+\put( 0.46,0.17){\circle*{0.05}}
+\put( 0.51,0.14){4}
+\put( 1.37,0.17){\circle*{0.05}}
+\put( 1.42,0.14){5}
+
+\put(-1.37,1.08){\circle*{0.05}}
+\put(-1.32,1.05){6}
+\put(-0.46,1.08){\circle*{0.05}}
+\put(-0.41,1.05){7}
+\put(-0.00,1.08){\circle*{0.05}}
+\put( 0.05,1.05){8}
+\put( 0.46,1.08){\circle*{0.05}}
+\put( 0.51,1.05){9}
+\put( 1.37,1.08){\circle*{0.05}}
+\put( 1.42,1.05){10}
+
+\put(-1.37,1.99){\circle*{0.05}}
+\put(-1.32,1.96){11}
+\put(-0.46,1.99){\circle*{0.05}}
+\put(-0.41,1.96){12}
+\put(-0.00,1.99){\circle*{0.05}}
+\put( 0.05,1.96){13}
+\put( 0.46,1.99){\circle*{0.05}}
+\put( 0.51,1.96){14}
+\put( 1.37,1.99){\circle*{0.05}}
+\put( 1.42,1.96){15}
+
+\put(-1.37,2.91){\circle*{0.05}}
+\put(-1.32,2.84){16}
+\put(-0.46,2.91){\circle*{0.05}}
+\put(-0.41,2.84){17}
+\put(-0.00,2.91){\circle*{0.05}}
+\put( 0.05,2.84){18}
+\put( 0.46,2.91){\circle*{0.05}}
+\put( 0.51,2.84){19}
+\put( 1.37,2.91){\circle*{0.05}}
+\put( 1.42,2.84){20}
+
+\put(-1.37,3.82){\circle*{0.05}}
+\put(-1.32,3.79){21}
+\put(-0.46,3.82){\circle*{0.05}}
+\put(-0.41,3.79){22}
+\put(-0.00,3.82){\circle*{0.05}}
+\put( 0.05,3.82){23}
+\put( 0.46,3.82){\circle*{0.05}}
+\put( 0.51,3.79){24}
+\put( 1.37,3.82){\circle*{0.05}}
+\put( 1.42,3.79){25}
+
+\put(-1.37,4.74){\circle*{0.05}}
+\put(-1.32,4.71){26}
+\put(-0.46,4.74){\circle*{0.05}}
+\put(-0.41,4.71){27}
+\put(-0.00,4.74){\circle*{0.05}}
+\put( 0.05,4.71){28}
+\put( 0.46,4.74){\circle*{0.05}}
+\put( 0.51,4.71){29}
+\put( 1.37,4.74){\circle*{0.05}}
+\put( 1.42,4.71){30}
+
+\put(-1.37,5.65){\circle*{0.05}}
+\put(-1.32,5.62){31}
+\put(-0.46,5.65){\circle*{0.05}}
+\put(-0.41,5.62){32}
+\put(-0.00,5.65){\circle*{0.05}}
+\put( 0.05,5.62){33}
+\put( 0.46,5.65){\circle*{0.05}}
+\put( 0.51,5.62){34}
+\put( 1.37,5.65){\circle*{0.05}}
+\put( 1.42,5.62){35}
+
+\put(-1.37,6.57){\circle*{0.05}}
+\put(-1.32,6.54){36}
+\put(-0.46,6.57){\circle*{0.05}}
+\put(-0.41,6.54){37}
+\put(-0.00,6.57){\circle*{0.05}}
+\put( 0.05,6.54){38}
+\put( 0.46,6.57){\circle*{0.05}}
+\put( 0.51,6.54){39}
+\put( 1.37,6.57){\circle*{0.05}}
+\put( 1.42,6.54){40}
+
+\put(-1.58,1.73){\vector(1,0){3.16}}
+\put(-1.58,2.95){\vector(1,0){3.16}}
+\put(-1.58,5.31){\vector(1,0){3.16}}
+\put(-1.51,4.90){\vector(1,0){3.02}}
+
+\put( 1.65,1.70){Forward Beam}
+\put( 1.65,2.92){Mid-Compartment Beam}
+\put( 1.65,5.28){Aft Beam}
+\put( 1.65,4.87){Vertical Beams (3)}
+
+
+\put( 0.13,3.65){A}
+\put( 0.08,5.27){B}
+
+\end{picture}
+\end{center}
+\caption[Layout of ceiling TCs, FAA Cargo Compartments]{Layout of the near-ceiling thermocouples and other instruments, FAA Cargo Compartment Experiments.}
+\label{FAA_Cargo_probe_locations}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_1-4} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_5-8} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_9-12} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_13-16} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_17-20} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_21-24} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_25-28} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_29-32}
+\end{tabular*}
+\caption[FAA Cargo Compartment experiments, ceiling jet, Test 1]
+{FAA Cargo Compartment experiments, ceiling jet, Test 1.}
+\label{FAA_Cargo_HGL_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_33-36} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_1_37-40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_1-4} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_5-8} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_9-12} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_13-16} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_17-20} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_21-24}
+\end{tabular*}
+\caption[FAA Cargo Compartment experiments, ceiling jet, Test 1 and 2]
+{FAA Cargo Compartment experiments, ceiling jet, Test 1 and 2.}
+\label{FAA_Cargo_HGL_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_25-28} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_29-32} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_33-36} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_2_37-40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_1-4} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_5-8} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_9-12} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_13-16}
+\end{tabular*}
+\caption[FAA Cargo Compartment experiments, ceiling jet, Test 2 and 3]
+{FAA Cargo Compartment experiments, ceiling jet, Test 2 and 3.}
+\label{FAA_Cargo_HGL_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_17-20} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_21-24} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_25-28} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_29-32} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_33-36} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Jet_Test_3_37-40}
+\end{tabular*}
+\caption[FAA Cargo Compartment experiments, ceiling jet, Test 3]
+{FAA Cargo Compartment experiments, ceiling jet, Test 3.}
+\label{FAA_Cargo_HGL_4}
+\end{figure}
+
+\clearpage
+
+
+
+
+\subsection{FM/SNL Experiments}
+
+The near-ceiling thermocouples in Sectors 1 and 3 have been chosen to evaluate the ceiling jet temperature prediction.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_01_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_02_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_03_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_04_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_05_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_06_Ceiling_Jet} \\
+\end{tabular*}
+\caption[FM/SNL experiments, ceiling jet, Tests 1-6]
+{FM/SNL experiments, ceiling jet, Tests 1-6.}
+\label{FM_SNL_Ceiling_Jet_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_07_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_08_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_09_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_10_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_11_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_12_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_13_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_14_Ceiling_Jet} \\
+\end{tabular*}
+\caption[FM/SNL experiments, ceiling jet, Tests 7-14]
+{FM/SNL experiments, ceiling jet, Tests 7-14.}
+\label{FM_SNL_Ceiling_Jet_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_15_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_16_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_17_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_21_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_SNL/FM_SNL_22_Ceiling_Jet} \\
+\end{tabular*}
+\caption[FM/SNL experiments, ceiling jet, Tests 15-17, 21-22]
+{FM/SNL experiments, ceiling jet, Tests 15-17, 21-22.}
+\label{FM_SNL_Ceiling_Jet_3}
+\end{figure}
+
+
+
+\clearpage
+
+\subsection{NIST Composite Beam}
+
+A brief description of the experiments is given in Sec.~\ref{NIST_Composite_Beam_Description}. The compartment interior dimensions are 12.4~m long, running east-west, 1.9~m wide, and 3.77~m high. Four experiments with fires were performed, labeled as Tests~2-5. Test~1 did not include a fire.
+
+To measure the ceiling jet temperature in the compartment, stainless steel sheathed thermocouples (Omega~TJ36-CAXL-14U-24 and TJ36-CAXL-38U-24) were mounted 2.5~cm and 23~cm below the ceiling, extending through four holes drilled down through the concrete. Two TCs were located at each of the four positions. TCC9 and TCC10 were located 2.6~m west and 0.6~m north of the compartment center. TCC11 and TCC12 were located at the same location east of the center. TCC13 and TCC14 were located at the same relative location, south and east of the center. TCC15 and TCC16 were located west and south of the center.
+
+Because of the symmetry of the experimental configuration, TCC9, TCC11, TCC13, and TCC15, all 2.5~cm below the ceiling are duplicates; as are TCC10, TCC12, TCC14, and TCC16, located 23~cm below the ceiling.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_2_TCC10-12-14-16} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_3_TCC10-12-14-16} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_4_TCC10-12-14-16} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_5_TCC10-12-14-16} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_2_TCC9-11-13-15} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_3_TCC9-11-13-15} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_4_TCC9-11-13-15} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Composite_Beam/Test_5_TCC9-11-13-15}
+\end{tabular*}
+\caption[NIST Composite Beam, ceiling jet temperatures]
+{NIST Composite Beam, ceiling jet temperatures.}
+\label{NIST_CB_cj}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NIST Smoke Alarm Experiments}
+
+The primary purpose of the NIST Smoke Alarm Experiments was to measure smoke detector activation times in residential settings. In the single-story manufactured home tests that were selected for validation, five smoke detector measurement stations (Station A through Station E) were located in different areas of the manufactured home. Thermocouple trees were also located at each measurement station. The highest thermocouple in the tree can be compared to ceiling jet temperature predictions. The plots on the following page show the measured and predicted ceiling jet temperatures for the five measurement stations in each test.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC02_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC05_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC07_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC10_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC33_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC35_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC38_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Smoke_Alarms/NIST_Smoke_Alarms_SDC39_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST Smoke Alarm experiments, ceiling jet]
+{NIST Smoke Alarm experiments, ceiling jet.}
+\label{NIST_Smoke_Alarms_Ceiling_Jet}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NIST/NRC Experiments}
+
+In the NIST/NRC experiments, seven vertical arrays of thermocouples were positioned throughout the compartment.
+The thermocouple nearest the ceiling in Tree~7, located toward the back of the compartment away from the door,
+has been chosen to evaluate the ceiling jet temperature prediction.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_13_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_16_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST/NRC experiments, ceiling jet, Tests 1, 2, 4, 7, 8, 10, 13, 16]
+{NIST/NRC experiments, ceiling jet, Tests 1, 2, 4, 7, 8, 10, 13, 16.}
+\label{NIST_NRC_Jet_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_17_Ceiling_Jet} &
+ \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST/NRC experiments, ceiling jet, Tests 3, 5, 9, 14, 15, 17, 18]
+{NIST/NRC experiments, ceiling jet, Tests 3, 5, 9, 14, 15, 17, 18.}
+\label{NIST_NRC_Jet_Open}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST/NRC Corner Effects Experiments}
+
+The plots on the following pages compare ceiling jet temperatures at two locations in a large compartment where corner, wall, and cabinet effects experiments were conducted. The corner and wall experiments involved a 60~cm by 60~cm natural gas burner with heat release rates of 200~kW, 300~kW, and 400~kW. The burner was either set in a corner or against a wall. The cabinet experiments involved gas burners set in one of two mock steel cabinets, with a variety of heat release rates.
+
+In all experiments, two vertical thermocouple arrays were placed along the centerline of the room, each one-third of the room length from each respective short wall. The arrays each had 13 bare-bead thermocouples. The first was 2~cm below the ceiling, used to measure the ceiling jet temperature.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/corner_200_kW_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/wall_200_kW_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/corner_300_kW_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/wall_300_kW_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/corner_400_kW_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/wall_400_kW_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST/NRC Corner Effects experiments, ceiling jet temperature]
+{NIST/NRC Corner Effects experiments, ceiling jet temperature, wall and corner tests.}
+\label{NIST_NRC_Corner_Ceiling_Jet_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_01_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_02_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_03_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_04_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_05_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_06_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST/NRC Corner Effects experiments, ceiling jet temperature, large cabinet]
+{NIST/NRC Corner Effects experiments, ceiling jet temperature, large cabinet.}
+\label{NIST_NRC_Corner_Ceiling_Jet_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_07_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_08_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_09_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_10_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_11_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Corner_Effects/cabinet_12_Ceiling_Jet}
+\end{tabular*}
+\caption[NIST/NRC Corner Effects experiments, ceiling jet temperature, medium-sized cabinet]
+{NIST/NRC Corner Effects experiments, ceiling jet temperature, medium-sized cabinet.}
+\label{NIST_NRC_Corner_Ceiling_Jet_3}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NIST Vent Study}
+
+These experiments were performed in a small-scale two floor enclosure, with each floor connected by one or two ceiling vents. Each floor contained a vertical array of eight sheathed thermocouples; the uppermost being 5~cm below the ceiling.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_01_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_02_Ceiling_Jet_Temp} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_03_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_04_Ceiling_Jet_Temp} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_05_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_06_Ceiling_Jet_Temp}
+\end{tabular*}
+\caption[NIST Vent Study, ceiling jet temperature, Tests 1-6]
+{NIST Vent Study, ceiling jet temperature, Tests 1-6.}
+\label{NIST_Vent_Study_Ceiling_Jet_1}
+\end{figure}
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_07_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_08_Ceiling_Jet_Temp} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_09_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_13_Ceiling_Jet_Temp} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_14_Ceiling_Jet_Temp} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Vent_Study/Test_15_Ceiling_Jet_Temp}
+\end{tabular*}
+\caption[NIST Vent Study, ceiling jet temperature, Tests 7-9, 13-15]
+{NIST Vent Study, ceiling jet temperature, Tests 7-9, 13-15.}
+\label{NIST_Vent_Study_Ceiling_Jet_2}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NRCC Smoke Tower}
+
+In the NRCC Smoke Tower experiments, there was a vertical array of 13 TCs and a single near-ceiling TC on the opposite side of the fire compartment. Shown in Fig.~\ref{NRCC_Smoke_Tower_Ceiling_Jet} are the predicted and measured temperatures of the single TC and the uppermost TC of the vertical array in the fire compartment. Shown in Fig.~\ref{NRCC_Smoke_Tower_Upper_Floors} are predictions of gas temperature measurements made in the stair vestibule of floors 4, 6, 8, and 10, along with inner compartment temperature measurements made on floors 4, 8, and 10. Note that the plot labels ``Slot'' refer to the data acquisition system in the experiments only and have no meaning in the present context. It should be clear from the plot title how the various curves ought to be interpreted.
+
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/BK-R_Fire_Room_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CMP-R_Fire_Room_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-I-R_Fire_Room_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-II-R_Fire_Room_Ceiling_Jet}
+\end{tabular*}
+\caption[NRCC Smoke Tower experiments, ceiling jet]{NRCC Smoke Tower experiments, ceiling jet.}
+\label{NRCC_Smoke_Tower_Ceiling_Jet}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/BK-R_Lobby_4_6_8_10} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/BK-R_Floor_4_8_10} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CMP-R_Lobby_4_6_8_10} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CMP-R_Floor_4_8_10} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-I-R_Lobby_4_6_8_10} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-I-R_Floor_4_8_10} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-II-R_Lobby_4_6_8_10} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Smoke_Tower/CLC-II-R_Floor_4_8_10}
+\end{tabular*}
+\caption[NRCC Smoke Tower, upper floor temperatures]{NRCC Smoke Tower, upper floor temperatures.}
+\label{NRCC_Smoke_Tower_Upper_Floors}
+\end{figure}
+
+
+\clearpage
+
+
+\subsection{PRISME DOOR Experiments}
+
+In the PRISME DOOR experiments, the uppermost TC in the vertical arrays were used to measure the ceiling jet temperature. These TCs were approximately 10~cm below the ceiling.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_1_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_1_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_1_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_1_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_1_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_1_Ceiling_Jet}
+\end{tabular*}
+\caption[PRISME DOOR experiments, ceiling jet, Room 1]{PRISME DOOR experiments, ceiling jet, Room 1.}
+\label{PRISME_Ceiling_Jet_Room_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_2_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_2_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_2_Ceiling_Jet}
+\end{tabular*}
+\caption[PRISME DOOR experiments, ceiling jet, Room 2]{PRISME DOOR experiments, ceiling jet, Room 2.}
+\label{PRISME_Ceiling_Jet_Room_2}
+\end{figure}
+
+\clearpage
+
+
+\subsection{PRISME SOURCE Experiments}
+
+In the PRISME SOURCE experiments, the uppermost TC in the vertical array was used to measure the ceiling jet temperature. The thermocouple array was located in the northeast corner of the room. This TC was approximately 10~cm below the ceiling.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D1_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D2_Room_2_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D3_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D4_Room_2_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5a_Room_2_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6_Room_2_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6a_Room_2_Ceiling_Jet}
+\end{tabular*}
+\caption[PRISME SOURCE experiments, ceiling jet, Room 2]{PRISME SOURCE experiments, ceiling jet, Room 2.}
+\label{PRISME_SOURCE_Ceiling_Jet_Room_1}
+\end{figure}
+
+\clearpage
+
+
+\subsection{SP Adiabatic Surface Temperature Experiments}
+
+Three experiments were conducted in a standard compartment, 3.6~m long by 2.4~m wide by 2.4~m high, with a 0.8~m wide by 2.0~m high door centered on the narrow wall. A single beam was suspended 20~cm below the ceiling lengthwise along the centerline of the compartment. There were three measurement stations along the beam at distances of 0.9~m (Station~A), 1.8~m (Station~B), and 2.7~m (Station~C) from the far wall where the fire was either positioned in the corner (Tests~1 and 2), or the center (Test 3). The gas temperatures reported here were measured 10~cm away from all four sides of the beam at Station~A, and 10~cm away from the two lateral sides at Stations~B and C. In the figure legends, the measurement station is denoted A, B, or C, and the position is denoted 1, 2, 3, or 4. Position~1 is 10~cm above the beam. Position~2 is 10~cm from the side of the beam facing away from the fire, Position~3 is 10~cm below the beam, and Position~4 is 10~cm away from the side of the beam facing the fire.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_1_Sta_A_Pos_1_and_2_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_1_Sta_A_Pos_3_and_4_Gas} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_1_Sta_B_Pos_2_and_4_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_1_Sta_C_Pos_2_and_4_Gas}
+\end{tabular*}
+\caption[SP AST experiments, ceiling jet, Test 1]{SP AST experiments, ceiling jet, Test 1.}
+\label{SP_Test_1_Gas}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_2_Sta_A_Pos_1_and_2_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_2_Sta_A_Pos_3_and_4_Gas} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_2_Sta_B_Pos_2_and_4_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_2_Sta_C_Pos_2_and_4_Gas} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_3_Sta_A_Pos_1_and_2_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_3_Sta_A_Pos_3_and_4_Gas} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_3_Sta_B_Pos_2_and_4_Gas} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/SP_AST/SP_AST_Test_3_Sta_C_Pos_2_and_4_Gas}
+\end{tabular*}
+\caption[SP AST experiments, ceiling jet, Tests 2 and 3]{SP AST experiments, ceiling jet, Tests 2 and 3.}
+\label{SP_Test_2_3_Gas}
+\end{figure}
+
+
+\clearpage
+
+\subsection{UL/NFPRF Series I Experiments}
+
+The primary purpose of the UL/NFPRF experiments was to measure sprinkler activation times for a series of heptane spray burner fires. To determine activation times, thermocouples were affixed to each sprinkler, and a sudden drop in temperature indicated activation. These same thermocouple temperatures (solid lines) can be compared to ceiling jet temperature predictions (dashed lines). Referring to Fig.~\ref{layout}, the chosen measurement locations are 56 (black lines), 68 (red lines), 86 (green lines), and 98 (blue lines), providing comparisons as close to, and as far away from, the fire as possible.
+
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_01_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_02_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_03_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_04_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_05_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_06_jet}
+\end{tabular*}
+\caption[UL/NFPPRF experiments, ceiling jet, Series I, Tests 1-6]{UL/NFPPRF experiments, ceiling jet, Series I, Tests 1-6.}
+\label{UL_NFPRF_jet_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_07_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_08_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_09_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_10_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_11_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_12_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_13_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_14_jet}
+\end{tabular*}
+\caption[UL/NFPPRF experiments, ceiling jet, Series I, Tests 7-14]{UL/NFPPRF experiments, ceiling jet, Series I, Tests 7-14.}
+\label{UL_NFPRF_jet_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_15_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_16_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_17_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_18_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_19_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_20_jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_21_jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_22_jet}
+\end{tabular*}
+\caption[UL/NFPPRF experiments, ceiling jet, Series I, Tests 15-22]{UL/NFPPRF experiments, ceiling jet, Series I, Tests 15-22.}
+\label{UL_NFPRF_jet_3}
+\end{figure}
+
+
+\clearpage
+
+\subsection{UL/NIJ House Experiments}
+
+The following plots compare the uppermost thermocouple measurements with corresponding model predictions for the ranch-style and colonial-style houses.
+
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Single_Story_Gas_1_CJ_LR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Single_Story_Gas_2_CJ_LR} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Single_Story_Gas_5_CJ_LR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Two_Story_Gas_1_CJ_LR} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Two_Story_Gas_4_CJ_LR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIJ_Houses/Two_Story_Gas_6_CJ_LR} \\
+\end{tabular*}
+\caption[UL/NIJ Experiments, ceiling jet temperature]{UL/NIJ Experiments, ceiling jet temperature}
+\label{UL_NIJ_CJ_1}
+\end{figure}
+
+
+\clearpage
+
+\subsection{UL/NIST Vent Experiments}
+
+The ceiling jet temperatures were measured at two locations, 90~cm from the short ends of the 2.4~m by 1.2~m double vent.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_1_Jet_Tree_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_1_Jet_Tree_2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_2_Jet_Tree_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_2_Jet_Tree_2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_3_Jet_Tree_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_3_Jet_Tree_2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_4_Jet_Tree_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NIST_Vents/UL_NIST_Vents_Test_4_Jet_Tree_2}
+\end{tabular*}
+\caption[UL/NIST Vents experiments, ceiling jet]{UL/NIST Vents experiments, ceiling jet.}
+\label{UL_NIST_Ceiling_Jet}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Vettori Flat Ceiling Experiments}
+\label{Vettori_Flat_Results}
+
+For these experiments, the measured and predicted thermocouple temperature at the location of the first two activating sprinklers are compared. The experiments consisted of either Smooth or Obstructed ceilings; Slow, Medium or Fast fires; and a burner in the Open, at the Wall, or in the Corner.
+The experiments included three replicates of each of the smooth ceiling configurations and two replicates of each of the obstructed ceiling configurations.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_01} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_02} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_03} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_FAST_v_Test_04} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_FAST_v_Test_05} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_MED_v_Test_06} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_MED_v_Test_07} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_MED_v_Test_08} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 1-8]{Vettori Flat Ceiling experiments, ceiling jet, Tests 1-8.}
+\label{Vettori_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_MED_v_Test_09} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_MED_v_Test_10} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_11} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_12} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_OPEN_FAST_v_Test_13} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_SLOW_v_Test_14} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_OPEN_SLOW_v_Test_15} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_FAST_v_Test_16} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 9-16]{Vettori Flat Ceiling experiments, ceiling jet, Tests 9-16.}
+\label{Vettori_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_FAST_v_Test_17} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_FAST_v_Test_18} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_FAST_v_Test_19} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_FAST_v_Test_20} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_MED_v_Test_21} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_MED_v_Test_22} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_MED_v_Test_23} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_MED_v_Test_24} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 17-24]{Vettori Flat Ceiling experiments, ceiling jet, Tests 17-24.}
+\label{Vettori_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_MED_v_Test_25} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_SLOW_v_Test_26} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_SLOW_v_Test_27} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_WALL_SLOW_v_Test_28} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_SLOW_v_Test_29} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_WALL_SLOW_v_Test_30} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_FAST_v_Test_31} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_FAST_v_Test_32} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 25-32]{Vettori Flat Ceiling experiments, ceiling jet, Tests 25-32.}
+\label{Vettori_4}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_FAST_v_Test_33} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_FAST_v_Test_34} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_FAST_v_Test_35} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_MED_v_Test_36} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_MED_v_Test_37} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_MED_v_Test_38} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_MED_v_Test_39} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_MED_v_Test_40} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 33-40]{Vettori Flat Ceiling experiments, ceiling jet, Tests 33-40.}
+\label{Vettori_5}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_SLOW_v_Test_41} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_SLOW_v_Test_42} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/SMOOTH_CORNER_SLOW_v_Test_43} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_SLOW_v_Test_44} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Flat_Ceiling/OBSTRUCTED_CORNER_SLOW_v_Test_45} \\
+\end{tabular*}
+\caption[Vettori Flat Ceiling experiments, ceiling jet, Tests 41-45]{Vettori Flat Ceiling experiments, ceiling jet, Tests 41-45.}
+\label{Vettori_6}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Vettori Sloped Ceiling Experiments}
+\label{Vettori_Sloped_Results}
+
+For these experiments, the measured and predicted thermocouple temperature at the locations of the first two activating sprinklers are compared. The thermocouples were located 15~cm below the ceiling. Replicate results are shown side by side, i.e. Test~2 is a replicate of Test~1; Test~4 is a replicate of Test~3, and so on. There were 36 unique configurations (2 replicates of each) combining the following parameters:
+\begin{itemize}
+\item \underline{F}lat, \underline{13}$^\circ$, or \underline{24}$^\circ$ Ceiling Slope
+\item \underline{S}mooth or \underline{O}bstructed Ceiling Surface
+\item \underline{F}ast or \underline{S}low Growth Fire
+\item \underline{C}orner, \underline{W}all, or \underline{D}etached Burner Location
+\end{itemize}
+The plots are labelled using this convention. For example, ``13SFC'' means that the ceiling is sloped 13$^\circ$ from horizontal, the ceiling is \underline{S}mooth (no beams), the fire growth rate is \underline{F}ast, and the burner is in the \underline{C}orner of the room.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFD_v_Test_01} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFD_v_Test_02} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSD_v_Test_03} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSD_v_Test_04} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFW_v_Test_05} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFW_v_Test_06} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSW_v_Test_07} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSW_v_Test_08} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 1-8]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 1-8.}
+\label{Vettori_Sloped_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFC_v_Test_09} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSFC_v_Test_10} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSC_v_Test_11} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FSSC_v_Test_12} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFD_v_Test_13} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFD_v_Test_14} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSD_v_Test_15} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSD_v_Test_16} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 9-16]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 9-16.}
+\label{Vettori_Sloped_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFW_v_Test_17} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFW_v_Test_18} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSW_v_Test_19} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSW_v_Test_20} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFC_v_Test_21} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOFC_v_Test_22} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSC_v_Test_23} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/FOSC_v_Test_24} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 17-24]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 17-24.}
+\label{Vettori_Sloped_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFD_v_Test_25} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFD_v_Test_26} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSD_v_Test_27} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSD_v_Test_28} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFW_v_Test_29} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFW_v_Test_30} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSW_v_Test_31} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSW_v_Test_32} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 25-32]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 25-32.}
+\label{Vettori_Sloped_4}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFC_v_Test_33} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SFC_v_Test_34} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSC_v_Test_35} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13SSC_v_Test_36} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFD_v_Test_37} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFD_v_Test_38} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSD_v_Test_39} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSD_v_Test_40} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 33-40]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 33-40.}
+\label{Vettori_Sloped_5}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFW_v_Test_41} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFW_v_Test_42} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSW_v_Test_43} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSW_v_Test_44} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFC_v_Test_45} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OFC_v_Test_46} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSC_v_Test_47} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/13OSC_v_Test_48} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 41-48]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 41-48.}
+\label{Vettori_Sloped_6}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFD_v_Test_49} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFD_v_Test_50} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSD_v_Test_51} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSD_v_Test_52} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFW_v_Test_53} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFW_v_Test_54} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSW_v_Test_55} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSW_v_Test_56} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 49-56]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 49-56.}
+\label{Vettori_Sloped_7}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFC_v_Test_57} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SFC_v_Test_58} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSC_v_Test_59} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24SSC_v_Test_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFD_v_Test_61} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFD_v_Test_62} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSD_v_Test_63} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSD_v_Test_64} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 57-64]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 57-64.}
+\label{Vettori_Sloped_8}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFW_v_Test_65} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFW_v_Test_66} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSW_v_Test_67} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSW_v_Test_68} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFC_v_Test_69} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OFC_v_Test_70} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSC_v_Test_71} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Vettori_Sloped_Ceiling/24OSC_v_Test_72} \\
+\end{tabular*}
+\caption[Vettori Sloped Ceiling experiments, ceiling jet, Tests 65-72]{Vettori Sloped Ceiling experiments, ceiling jet, Tests 65-72.}
+\label{Vettori_Sloped_9}
+\end{figure}
+
+\clearpage
+
+
+
+
+\subsection{WTC Experiments}
+
+In the WTC experiments, the compartment was 7~m long, 3.6~m wide and 3.8~m high. A 1~m by 2~m pan was positioned close to the center of the compartment. Aspirated thermocouples were positioned 3~m to the west (TTRW1) and 2~m to the east (TTRE1) of the fire pan, 18~cm below the ceiling.
+
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Ceiling_Jet} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Ceiling_Jet} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Ceiling_Jet}
+\end{tabular*}
+\caption[WTC experiments, ceiling jet, Tests 1-6]{WTC experiments, ceiling jet, Tests 1-6.}
+\label{WTC_Jet}
+\end{figure}
+
+\clearpage
+
+\subsection{Summary of Ceiling Jet Temperature Predictions}
+\label{Ceiling Jet Temperature}
+
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Flat_Ceiling_Jet_Temperature}
+\end{tabular}
+\end{center}
+\caption[Summary of ceiling jet temperature predictions]{Summary of ceiling jet temperature predictions.}
+\label{Flat_Ceiling_Jet_Summary}
+\end{figure}
+
+
+
+
+\clearpage
+
+\section{Sprinkler Activation Times}
+
+There are two ways to evaluate the model's ability to predict sprinkler activation. The first is to simply compare the total number of predicted versus observed activations. The second is to compare the time to first activation. Comparing the total number of activations indirectly indicates if the model accurately predicts the cooling of the hot gases by the water spray. Comparing time to first activation indirectly indicates if the model accurately predicts the velocity and temperature of the ceiling jet.
+
+\subsection{Time to First Sprinkler Activation}
+\label{Sprinkler Activation Time}
+
+Figure~\ref{Sprinkler_Activation_Times} compares measured and predicted sprinkler activation times. For the UL/NFPRF experiments, only the time to first activation is compared because the resulting water spray sometimes delays the second activation substantially. While the model accounts for the cooling effect of the spray, the disruption of the activation sequence is somewhat random. A better way to check the accuracy of the model is to compare the predicted and measured total number of activation, which is discussed in the next section. For the Vettori experiments, the sprinklers did not flow water; thus, it is possible to consider the activation times of up to four sprinklers.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Sprinkler_Actuation_Time}
+\end{center}
+\caption[Comparison of measured and predicted sprinkler actuation times]{Comparison of measured and predicted sprinkler actuation times.}
+\label{Sprinkler_Activation_Times}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Number of Sprinkler Activations}
+\label{UL_NFPRF:Results}
+\label{Sprinkler Actuations}
+
+The figures on the following pages display the number of sprinklers actuated as a function of time. The results are summarized in Fig.~\ref{UL_NFPRF}. The discussion of the uncertainty for this quantity can be found in Sec.~\ref{uncertainty_sprinkler_acts}.
+
+Note that no sprinklers were installed for Test~11, Series~I.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_01_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_02_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_03_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_04_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_05_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_06_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_07_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_08_Actuations} \\
+\end{tabular*}
+\caption[UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 1-8]{UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 1-8.}
+\label{UL_NFPRF_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_09_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_10_Actuations} \\
+%\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_11_Actuations} &
+&
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_12_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_13_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_14_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_15_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_16_Actuations} \\
+\end{tabular*}
+\caption[UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 9-16]{UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 9-16.}
+\label{UL_NFPRF_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_17_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_18_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_19_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_20_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_21_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_1_22_Actuations}
+\end{tabular*}
+\caption[UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 17-22]{UL/NFPRF experiments, number of sprinkler activations, Series I, Tests 17-22.}
+\label{UL_NFPRF_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_01_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_02_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_03_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_04_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_05_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_06_Actuations}
+\end{tabular*}
+\caption[UL/NFPRF experiments, number of sprinkler activations, Series II, Tests 1-6]{UL/NFPRF experiments, number of sprinkler activations, Series II, Tests 1-6.}
+\label{UL_NFPRF_2_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_07_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_08_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_09_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_10_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_11_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_2_12_Actuations}
+\end{tabular*}
+\caption[UL/NFPRF experiments, number of sprinkler activations, Series II, Tests 7-12]{UL/NFPRF experiments, number of sprinkler activations, Series II, Tests 7-12.}
+\label{UL_NFPRF_2_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_P-1_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_P-2_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_P-3_Actuations} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_P-4_Actuations} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UL_NFPRF/UL_NFPRF_P-5_Actuations} &
+\end{tabular*}
+\caption[UL/NFPRF experiments, no.~of sprinkler activations, Group A Commodity, Tests 1-5]{UL/NFPRF experiments, number of sprinkler activations, Group A Commodity, Tests 1-5.}
+\label{UL_NFPRF_3_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Sprinkler_Actuations}
+\end{center}
+\caption[Comparison of the number of predicted and measured sprinkler activations]
+{Comparison of the number of predicted and measured sprinkler activations.}
+\label{UL_NFPRF}
+\end{figure}
+
+
+
+
+\clearpage
+
+\section{Smoke Detector Activation Times}
+\label{Smoke Detector Activation Time}
+\label{Smoke Detector Activation Time, Temp. Rise}
+
+FDS can model smoke detector activation in two ways. The first method is based on the assumption that activation occurs when the gas temperature near the detector rises above a given threshold. Essentially this method treats the smoke detector exactly like a heat detector with a relatively low RTI value. Figure~\ref{NIST_Smoke_Alarms_Scatterplot_Temp_Rise} compares the measured versus predicted smoke detector activation times using a heat detector/temperature rise approach. The heat detectors were set with an RTI of 5~$\sqrt{\hbox{m}\cdot \hbox{s}}$ and an activation temperature of \SI{5}{\celsius} above ambient, based on the suggestion of Bukowski and Averill~\cite{Bukowski:2}.
+
+\begin{figure}[!h]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4.0in]{SCRIPT_FIGURES/ScatterPlots/FDS_Smoke_Detector_Activation_Time_Temp_Rise}
+\end{tabular}
+\end{center}
+\caption[Summary of smoke detector activation times (temperature rise), NIST Smoke Alarms]
+{Summary of smoke detector activation times (using temperature rise), NIST Smoke Alarms.}
+\label{NIST_Smoke_Alarms_Scatterplot_Temp_Rise}
+\end{figure}
+
+The second method of predicting smoke detector activation is to use an empirical model of the smoke transit time within the device to estimate when the smoke concentration will rise above a particular threshold value set by the manufacturer. Figure~\ref{NIST_Smoke_Alarms_Scatterplot} compares the measured versus predicted smoke detector activation times using the smoke detector model. Note that the test report~\cite{Bukowski:1} does not provide the parameters that characterize the smoke transit time within the detector. Instead, generic values are used.
+
+
+\begin{figure}[!h]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4.0in]{SCRIPT_FIGURES/ScatterPlots/FDS_Smoke_Detector_Activation_Time}
+\end{tabular}
+\end{center}
+\caption[Summary of activation times, smoke detector model, NIST Smoke Alarms]
+{Summary of smoke detector activation times (using smoke detector model), NIST Smoke Alarms.}
+\label{NIST_Smoke_Alarms_Scatterplot}
+\end{figure}
+
+
+
+\clearpage
+
+\section{Backlayering of Smoke in Tunnels}
+
+This section presents small and large-scale experiments focused on the phenomenon known as ``backlayering;'' that is, where jet fans are installed near the ceiling of a tunnel to blow smoke from a fire in one direction. Propagation of smoke upwind of the fire is called backlayering.
+
+
+
+
+\subsection{Wu Bakar Tunnel Experiments}
+
+This section contains the results of the simulations of the Wu and Bakar experiments described in Sec.~\ref{Wu_Bakar_Tunnels_Description}. Five simulations are conducted. In each, the heat release rate is stepped up from its lowest reported value to its highest, each step lasting 20~s. For each of the eight heat release rates, the tunnel velocity is set to the reported critical velocity. Temperature readings along the ceiling indicate where the smoke layer temperature drops below 30~$^\circ$C, 10~$^\circ$C above ambient. This is taken as the extent of the back-layer. Using an empirical correlation for the normalized back-layer length, $L_{\rm b}^*$, developed by Li~et al.~\cite{Li:FSJ2010}
+\be
+   L_{\rm b}^* = \left\{ \begin{array}{ll} 18.5 \, \ln (0.81 \, Q^{*1/3}/V^*) & Q^*\le 0.15 \\
+                                      18.5 \, \ln (0.43 /V^*)            & Q^*>   0.15 \end{array} \right.
+\ee
+where
+\be
+   L_{\rm b}^* = \frac{L_{\rm b}}{\bar{H}} \quad ; \quad \bar{H}=\frac{4A}{P} \quad ; \quad Q^*=\frac{Q}{\rho_\infty c_p T_\infty \sqrt{g \bar{H}^5} } \quad ; \quad V^* = \frac{V}{\sqrt{g \bar{H}}}
+\ee
+the FDS-predicted critical velocity, $V_{\rm FDS}$, can be estimated from the measured, $V_{\rm exp}$, via
+\be
+   V_{\rm FDS} \approx V_{\rm exp} \left( 1 + \frac{L_{\rm b,FDS}}{18.5 \, \bar{H}} \right)
+\ee
+Note that $\bar{H}$ is known as the {\em hydraulic diameter} which takes into consideration the tunnel's cross-sectional area, $A$, and perimeter, $P$. For a square cross section, the hydraulic diameter equals the tunnel height.
+
+\begin{figure}[!h]
+\begin{center}
+\includegraphics[height=2.5in]{SCRIPT_FIGURES/Wu_Bakar_Tunnels/Wu_Bakar_Critical_Velocity}
+\end{center}
+\caption[Wu and Bakar critical velocity correlation with FDS results added]
+{Wu and Bakar critical velocity correlation with FDS results added.}
+\label{Wu_Bakar_Correlation}
+\end{figure}
+
+The non-dimensionalized critical velocity predictions are plotted against the non-dimensionalized HRR in Fig.~\ref{Wu_Bakar_Correlation}. The solid line in the figure is the correlation developed by Wu and Bakar~\cite{Wu:FSJ2000}:
+\be
+   V^* = \left\{ \begin{array}{ll} 0.4 \, (Q^*/0.2)^{1/3} & Q^* \le 0.2 \\ 0.4 & Q^* > 0.2 \end{array} \right.
+\ee
+
+
+\FloatBarrier
+
+\subsection{Memorial Tunnel Experiments}
+\label{Memorial_Tunnel_Volume_Flow}
+
+A description of the Memorial Tunnel experiments can be found in Sec.~\ref{Memorial_Tunnel_Description}. Figure~\ref{Memorial_Tunnel_Cold_Flow} compares predicted and measured volume flow through the tunnel as a function of the number of activated jet fans. Note that the experimental data has been reported in Ref.~\cite{Memorial_Phase_IV}, published in 1999. The original test report, published in 1995~\cite{Memorial}, contains a section (8.8) where these cold flow fan tests are discussed. The reported volume flows in the original report are approximately 20~\% higher than those reported in the follow-up report. The reason for the discrepancy is that the cross-sectional area was reduced at the measurement locations due to the installation of instrument packages.
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Cold_Flow_Series_1_Volume_Flow}
+\end{center}
+\caption[Volume flow in Memorial Tunnel as a function of the number of jet fans]
+{Volume flow in Memorial Tunnel as a function of the number of jet fans.}
+\label{Memorial_Tunnel_Cold_Flow}
+\end{figure}
+
+The figures on the following pages summarize the results of 17 simulations of the longitudinal fan experiments (Sequences 15, 17, and 18). For each experiment, the measured heat release rate is shown. The model heat release rate is specified to match, but some deviations between the two are evident. Next, the measured and predicted volume flow through the tunnel is presented. The measured and predicted values are taken at Loop~214, just inside the north (uphill) portal. Next shown are the near-ceiling temperature and velocity at Loop~305, approximately 10~m uphill of the fire. ``Backlayering'' of smoke is assumed if the temperature at this location rises significantly above ambient. The jet fans were positioned uphill of the fire and usually blew in the downhill direction, except for Tests 23B, 24B, and 25B, where the fans were positioned downhill of the fire, but still blew in the downhill direction. The fan flow direction was reversed during some of the experiments.
+
+The fifth figure indicates where a near-ceiling temperature of 50~$^\circ$C is located, as interpolated from the measurements made 0.9~m below the ceiling. This position varies in time as the jet fans are activated. The fire location is designated with the letter ``F''. In most cases, the fans blew air downhill from the north portal (left) toward the south portal (right). Backlayering is indicated when the location of 50~$^\circ$C falls to the left of the dashed vertical line.
+
+Finally, the contour plots show comparisons of measured and predicted gas temperature in the vertical centerline plane of the tunnel. The temperature contours are drawn from temperature values obtained along 13 vertical arrays of thermocouples. The fire location is designated with the letter ``F''.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_501_T_10}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 501]{Summary of Memorial Tunnel Test 501. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_501}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_502_T_10}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 502]{Summary of Memorial Tunnel Test 502. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_502}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_605_T_28}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 605]{Summary of Memorial Tunnel Test 605. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_605}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_606A_T_4}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 606A]{Summary of Memorial Tunnel Test 606A. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_606A}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_607_T_10}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 607]{Summary of Memorial Tunnel Test 607. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_607}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_608_T_2}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 608]{Summary of Memorial Tunnel Test 608. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_608}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_610_T_24}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 610]{Summary of Memorial Tunnel Test 610. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_610}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_611_T_2}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 611]{Summary of Memorial Tunnel Test 611. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_611}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_612B_T_2}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 612B]{Summary of Memorial Tunnel Test 612B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_612B}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_615B_T_28}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 615B]{Summary of Memorial Tunnel Test 615B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_615B}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_617A_T_30}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 617A]{Summary of Memorial Tunnel Test 617A. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_617A}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_618A_T_5}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 618A]{Summary of Memorial Tunnel Test 618A. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_618A}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_621A_T_12}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 621A]{Summary of Memorial Tunnel Test 621A. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_621A}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_622B_T_5}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 622B]{Summary of Memorial Tunnel Test 622B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_622B}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_623B_T_10}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 623B]{Summary of Memorial Tunnel Test 623B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_623B}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_624B_T_3}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 624B]{Summary of Memorial Tunnel Test 624B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_624B}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B-214-BV} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B-CJ} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B-CJ-Vel} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B_tvT}} \\
+\multicolumn{2}{c}{\includegraphics[width=6.4in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_625B_T_20}}
+\end{tabular*}
+\caption[Summary of Memorial Tunnel Test 625B]{Summary of Memorial Tunnel Test 625B. The measured and specified heat release rates are shown in the upper left figure. The measured and predicted average velocity through the tunnel are shown in the upper right. Note that a positive value denotes a flow direction coinciding with the direction of the fan flow. The Ceiling Jet Temperature shown in the left figure of the second row is taken near the ceiling at Loop~305, 10~m uphill of the fire. The Ceiling Jet Velocity, second row right, is taken near the ceiling at Loop~305, 10~m uphill of the fire. The third row figure indicates the location of the 50~$^\circ$C near-ceiling temperature as a function of time. The last plot displays measured and predicted temperature contours along the vertical centerline plane.}
+\label{Memorial_Tunnel_625B}
+\end{figure}
+
+\FloatBarrier
+
+The plots on the following pages show the results of the transverse ventilation cases. Only the extent of the back-layering is shown.
+
+\newpage
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_101CR_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_102_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_102R1_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_102R_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_103_tvT}
+\end{tabular*}
+\caption[Back-layer, Full Transverse Ventilation, Sequence 1]{Back-layer, Full Transverse Ventilation, Sequence 1. The air is supplied by the south portal fans along the entire length of the tunnel at road level on the west curb. Air is exhausted by the north portal fans along the entire length of the tunnel through the east side ceiling vents.}
+\label{Memorial_Tunnel_Seq_1a}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_104_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_105_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_106_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_107_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_108_tvT}
+\end{tabular*}
+\caption[Back-layer, Full Transverse Ventilation, Sequence 1]{Back-layer, Full Transverse Ventilation, Sequence 1. The air is supplied by the south portal fans along the entire length of the tunnel at road level on the west curb. Air is exhausted by the north portal fans along the entire length of the tunnel through the east side ceiling vents.}
+\label{Memorial_Tunnel_Seq_1b}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_109_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_110_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_111_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_112A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_113A_tvT}
+\end{tabular*}
+\caption[Back-layer, Full Transverse Ventilation, Sequence 1]{Back-layer, Full Transverse Ventilation, Sequence 1. The air is supplied by the south portal fans along the entire length of the tunnel at road level on the west curb. Air is exhausted by the north portal fans along the entire length of the tunnel through the east side ceiling vents.}
+\label{Memorial_Tunnel_Seq_1c}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_115A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_126B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_126BR1_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_128B_tvT}
+\end{tabular*}
+\caption[Back-layer, Full Transverse Ventilation, Sequence 1]{Back-layer, Full Transverse Ventilation, Sequence 1. The air is supplied by the south portal fans along the entire length of the tunnel at road level on the west curb. Air is exhausted by the north portal fans along the entire length of the tunnel through the east side ceiling vents.}
+\label{Memorial_Tunnel_Seq_1d}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_202_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_203_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_205_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_207A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_208A_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3]{Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3. The air is exhausted at the ceiling using both the north and south portal fans.}
+\label{Memorial_Tunnel_Seq_3a}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_210_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_212_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_214A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_215A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_216A_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3]{Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3. The air is exhausted at the ceiling using both the north and south portal fans.}
+\label{Memorial_Tunnel_Seq_3b}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_217A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_218B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_247B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_248B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_249B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_252B_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3]{Back-layer, Partial Transverse Exhaust Ventilation, Sequence 3. The air is exhausted at the ceiling using both the north and south portal fans.}
+\label{Memorial_Tunnel_Seq_3c}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_223_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_226_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_227A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_244B_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Supply Ventilation, Sequences 4 and 5]{Back-layer, Partial Transverse Supply Ventilation, Sequences 4 and 5. For Sequence 4, the air is supplied at the roadway along the west wall. For Sequence~5, the air is supplied at the ceiling.}
+\label{Memorial_Tunnel_Seq_4_and_5}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_229_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_230_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_231_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_233_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_235_tvT}
+\end{tabular*}
+\caption[Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6]{Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6. Air is supplied through the ceiling in the northern half of the tunnel and exhausted through the ceiling in the southern half.}
+\label{Memorial_Tunnel_Seq_6a}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_236_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_238A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_239_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_245B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_246B_tvT}
+\end{tabular*}
+\caption[Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6]{Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6. Air is supplied through the ceiling in the northern half of the tunnel and exhausted through the ceiling in the southern half.}
+\label{Memorial_Tunnel_Seq_6b}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_250B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_251B_tvT}
+\end{tabular*}
+\caption[Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6]{Back-layer, Two-Zone Partial Transverse Ventilation, Sequence 6. Air is supplied through the ceiling in the northern half of the tunnel and exhausted through the ceiling in the southern half.}
+\label{Memorial_Tunnel_Seq_6c}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_301A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_302A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_303A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_305A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_306A_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8]{Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8. Air exhausted through the ceiling, which includes an extra large port.}
+\label{Memorial_Tunnel_Seq_8a}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_309A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_312A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_313A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_338B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_339B_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8]{Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8. Air exhausted through the ceiling, which includes an extra large port.}
+\label{Memorial_Tunnel_Seq_8b}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_340B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_341B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_342B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_343B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_344B_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8]{Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8. Air exhausted through the ceiling, which includes an extra large port.}
+\label{Memorial_Tunnel_Seq_8c}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_345B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_346B_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8]{Back-layer, Partial Transverse Ventilation with Single Point Extraction, Sequence 8. Air exhausted through the ceiling, which includes an extra large port.}
+\label{Memorial_Tunnel_Seq_8d}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_314_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_316_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_321A_tvT}
+\end{tabular*}
+\caption[Back-layer, Point Supply Operation, Sequence 9]{Back-layer, Point Supply Operation, Sequence 9. Air is supplied through a single large ceiling vent.}
+\label{Memorial_Tunnel_Seq_9}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_315A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_317A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_318A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_319A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_320A_tvT}
+\end{tabular*}
+\caption[Back-layer, Point Exhaust Operation, Sequence 10]{Back-layer, Point Exhaust Operation, Sequence 10. Air is exhausted through a single large ceiling vent.}
+\label{Memorial_Tunnel_Seq_10}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l}
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_401A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_403A_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_407B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_408B_tvT} \\
+\includegraphics[width=6.5in]{SCRIPT_FIGURES/Memorial_Tunnel/Test_404A_tvT}
+\end{tabular*}
+\caption[Back-layer, Partial Transverse with Oversize Exhaust Ports, Sequence 13 and 14]{Back-layer, Partial Transverse Ventilation with Oversize Exhaust Ports, Sequence 13 and 14. Air is exhausted through ceiling vents and extra large openings.}
+\label{Memorial_Tunnel_Seq_13_and_14}
+\end{figure}
+
+
+\clearpage
+
+\subsection{FHWA Tunnel Experiments}
+\label{FHWA_Tunnel_Results}
+
+The figures on the following pages summarize the results of 11 simulations of reduced-scale tunnel fire experiments conducted at the Institute f{\"u}r Angewandte Brandschutzforschung (IFAB), Germany. For each experiment, the measured heat release rate (HRR) is shown. The HRR was measured using a load cell and using oxygen consumption calorimetry. When available, the load cell data was used in the simulations. The plots make clear which measurement was used.
+
+The plots to the right of each figure indicate where a near-ceiling temperature of 50~$^\circ$C is located, as interpolated from the measurements made just below the ceiling. The fire location is designated with the vertical dashed line. The ventilation flow is from left to right; thus, backlayering is indicated when the location of the 50~$^\circ$C contour falls to the left of the dashed vertical line.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-07-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-07_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-08-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-08_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-09-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-09_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-10-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-10_tvT}
+\end{tabular*}
+\caption[Summary of FHWA Tunnel experiments 7, 8, 9 and 10]{Summary of FHWA Tunnel experiments 7, 8, 9 and 10.}
+\label{FHWA_Tunnel_Results_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-11-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-11_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-13-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-13_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-14-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-14_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-15-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-15_tvT}
+\end{tabular*}
+\caption[Summary of FHWA Tunnel experiments 11, 13, 14 and 15]{Summary of FHWA Tunnel experiments 11, 13, 14 and 15.}
+\label{FHWA_Tunnel_Results_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-19-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-19_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-22-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-22_tvT} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-24-HRR} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FHWA_Tunnel/IFAB-24_tvT}
+\end{tabular*}
+\caption[Summary of FHWA Tunnel experiments 19, 22 and 24]{Summary of FHWA Tunnel experiments 19, 22 and 24.}
+\label{FHWA_Tunnel_Results_3}
+\end{figure}
+
+

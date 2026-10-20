@@ -1,0 +1,76 @@
+Inputs based on Fig 6, Li and Chow, Fire Technology, 44, 351-381, 2008.
+
+&HEAD CHID='water_evaporation_8', TITLE='Comparison of thermally-thick and thin water droplets' /
+
+&MESH IJK=11,11,30, XB=0.0,1.1,0.0,1.1,0.0,3.0 /
+
+&TIME T_END=16, DT=0.002 /
+
+&DUMP NFRAMES=40 /
+
+&MISC TMPA=60 /
+
+&RADI RADIATION=F/
+
+&SPEC ID='LJ AIR', BACKGROUND=T /
+&SPEC ID='WATER VAPOR', MASS_FRACTION_0=0.1 /
+
+&VENT MB='XMIN',SURF_ID='OPEN'/
+&VENT MB='XMAX',SURF_ID='OPEN'/
+&VENT MB='YMIN',SURF_ID='OPEN'/
+&VENT MB='YMAX',SURF_ID='OPEN'/
+&VENT MB='ZMIN',SURF_ID='OPEN'/
+&VENT MB='ZMAX',SURF_ID='OPEN'/
+
+&SURF ID           = 'MY DROPLET'
+      MATL_ID      = 'WATER'
+      COLOR        = 'BLUE'
+      GEOMETRY     = 'SPHERICAL'
+      THICKNESS    = 5.E-5
+      TMP_INNER    = 10.
+      MINIMUM_LAYER_THICKNESS = 1.E-10 /
+
+&MATL ID                     = 'WATER'
+      EMISSIVITY             = 0.95
+      DENSITY                = 1000.
+      SPEC_ID                = 'WATER VAPOR'
+      NU_SPEC                = 1
+      CONDUCTIVITY           = 0.609
+      SPECIFIC_HEAT_RAMP     = 'c_H2O'
+      HEAT_OF_REACTION       = 2269.09
+      BOILING_TEMPERATURE    = 100. /
+
+! Ramp defined to match thermally-thin liquid properties
+
+&RAMP ID='c_H2O', T=0, F=4.227/
+&RAMP ID='c_H2O', T=5, F=4.198/
+&RAMP ID='c_H2O', T=10, F=4.185/
+&RAMP ID='c_H2O', T=15, F=4.182/
+&RAMP ID='c_H2O', T=20, F=4.182/
+&RAMP ID='c_H2O', T=25, F=4.183/
+&RAMP ID='c_H2O', T=35, F=4.183/
+&RAMP ID='c_H2O', T=40, F=4.182/
+&RAMP ID='c_H2O', T=45, F=4.181/
+&RAMP ID='c_H2O', T=55, F=4.181/
+&RAMP ID='c_H2O', T=60, F=4.183/
+&RAMP ID='c_H2O', T=65, F=4.185/
+&RAMP ID='c_H2O', T=70, F=4.188/
+&RAMP ID='c_H2O', T=75, F=4.191/
+&RAMP ID='c_H2O', T=80, F=4.195/
+&RAMP ID='c_H2O', T=85, F=4.199/
+&RAMP ID='c_H2O', T=90, F=4.203/
+&RAMP ID='c_H2O', T=95, F=4.209/
+&RAMP ID='c_H2O', T=100, F=4.217/
+
+&PART ID='thick droplet', SURF_ID='MY DROPLET', SAMPLING_FACTOR=1, QUANTITIES(1)='PARTICLE W' /
+&INIT ID='thick', XYZ=0.35,0.35,2.95, PART_ID='thick droplet', N_PARTICLES=1, UVW=0,0,-3. /
+
+&PART ID='thin droplet', SPEC_ID='WATER VAPOR', DIAMETER=100., MONODISPERSE=T, INITIAL_TEMPERATURE=10., SAMPLING_FACTOR=1 /
+&INIT ID='thin', XYZ=0.75,0.75,2.95, PART_ID='thin droplet', N_PARTICLES=1, UVW=0,0,-3. /
+
+&DEVC ID='z_thick', QUANTITY='PARTICLE Z', INIT_ID='thick' /
+&DEVC ID='D_thick', QUANTITY='WALL THICKNESS', INIT_ID='thick', CONVERSION_FACTOR=2.E6, UNITS='mu-m' /
+&DEVC ID='z_thin',  QUANTITY='PARTICLE Z', INIT_ID='thin' /
+&DEVC ID='D_thin',  QUANTITY='PARTICLE DIAMETER', INIT_ID='thin' /
+
+&TAIL /

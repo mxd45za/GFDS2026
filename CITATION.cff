@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+
+title: "GFDS: GPU-Accelerated Fire Dynamics Simulator"
+
+type: software
+
+version: "1.0"
+
+date-released: "2026-10-20"
+
+authors:
+  - family-names: Xiao
+    given-names: Xinming
+
+  - family-names: Ming
+    given-names: Pingjian
+
+  - family-names: Zeng
+    given-names: Yu
+
+  - family-names: Guo
+    given-names: Kaixin
+
+repository-code: "https://github.com/mxd45za/GFDS"
+
+url: "https://github.com/mxd45za/GFDS"
+
+license-url: "https://github.com/mxd45za/GFDS/blob/main/LICENSE.md"
+
+message: "If you use GFDS, please cite this software and the accompanying GFDS paper."

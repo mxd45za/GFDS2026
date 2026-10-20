@@ -1,0 +1,231 @@
+&HEAD CHID='Cardboard_DW_60', TITLE='Corrugated Cardboard Gasification'/
+
+&MESH IJK=3,3,3, XB=-0.15,0.15,-0.15,0.15,0.0,0.3 /
+
+&MISC Y_O2_INFTY=0.01, SOLID_PHASE_ONLY=.TRUE., TMPA = 97. /
+
+&TIME T_END=200, WALL_INCREMENT=1, DT=0.05 /
+
+&REAC FUEL ='CB GAS', C=1., H=4., SOOT_YIELD=0. /
+
+&RAMP ID='k_LB_int', T=107., F=0.0541 /
+&RAMP ID='k_LB_int', T=127., F=0.0548 /
+&RAMP ID='k_LB_int', T=307., F=0.0646 /
+&RAMP ID='k_LB_int', T=427., F=0.0757 /
+
+&RAMP ID='k_LB_char', T=347., F=0.0357 /
+&RAMP ID='k_LB_char', T=447., F=0.0560 /
+&RAMP ID='k_LB_char', T=627., F=0.1094 /
+&RAMP ID='k_LB_char', T=847., F=0.2107 /
+
+&RAMP ID='k_FL_int', T=107., F=0.0912 /
+&RAMP ID='k_FL_int', T=247., F=0.1555 /
+&RAMP ID='k_FL_int', T=367., F=0.2466 /
+&RAMP ID='k_FL_int', T=427., F=0.3073 /
+
+&RAMP ID='k_FL_char', T=307., F=0.293 /
+&RAMP ID='k_FL_char', T=407., F=0.472 /
+&RAMP ID='k_FL_char', T=607., F=1.022 /
+&RAMP ID='k_FL_char', T=847., F=2.107 /
+
+&RAMP ID='k_Kaowool', T=20., F=0.0487 /
+&RAMP ID='k_Kaowool', T=240., F=0.0577 /
+&RAMP ID='k_Kaowool', T=400., F=0.0703 /
+
+&MATL ID='MOISTURE'
+      N_REACTIONS=1
+      A(1) = 6.14
+      E(1) = 2.35E4
+      EMISSIVITY=0.7
+      DENSITY=1000.
+      SPEC_ID='CB GAS'
+      NU_SPEC=1.0
+      CONDUCTIVITY = 0.1
+      SPECIFIC_HEAT = 4.19
+      HEAT_OF_REACTION = 2445. /
+
+&MATL ID='LB'
+      N_REACTIONS=1
+      A(1) = 7.95E9
+      E(1) = 1.30E5
+      EMISSIVITY=0.7
+      DENSITY=520.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.1
+      MATL_ID='LB int'
+      NU_MATL=0.9
+      CONDUCTIVITY = 0.1
+      SPECIFIC_HEAT = 1.80 /
+
+&MATL ID='LB int'
+      N_REACTIONS=1
+      A(1) = 2.0E11
+      E(1) = 1.60E5
+      EMISSIVITY=0.775
+      HEAT_OF_REACTION=126.
+      DENSITY=468.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.63
+      MATL_ID='LB char1'
+      NU_MATL=0.37
+      CONDUCTIVITY_RAMP = 'k_LB_int'
+      SPECIFIC_HEAT = 1.55 /
+
+&MATL ID='LB char1'
+      N_REACTIONS=1
+      A(1) = 2.61e-2
+      E(1) = 1.70E4
+      EMISSIVITY=0.85
+      DENSITY=170.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.41
+      MATL_ID='LB char2'
+      NU_MATL=0.59
+      CONDUCTIVITY_RAMP = 'k_LB_char'
+      SPECIFIC_HEAT = 1.30 /
+
+&MATL ID='LB char2'
+      EMISSIVITY=0.85
+      DENSITY=100.
+      CONDUCTIVITY_RAMP = 'k_LB_char'
+      SPECIFIC_HEAT=1.30 /
+
+&MATL ID='CFL'
+      N_REACTIONS=1
+      A(1) = 7.95E9
+      E(1) = 1.30E5
+      EMISSIVITY=0.7
+      DENSITY=49.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.1
+      MATL_ID='CFL int'
+      NU_MATL=0.9
+      CONDUCTIVITY = 0.1
+      SPECIFIC_HEAT = 1.80 /
+
+&MATL ID='CFL int'
+      N_REACTIONS=1
+      A(1) = 2.0E11
+      E(1) = 1.60E5
+      EMISSIVITY=0.775
+      DENSITY=44.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.63
+      MATL_ID='CFL char1'
+      NU_MATL=0.37
+      HEAT_OF_REACTION=126.
+      CONDUCTIVITY_RAMP = 'k_FL_int'
+      SPECIFIC_HEAT = 1.55 /
+
+&MATL ID='CFL char1'
+      N_REACTIONS=1
+      A(1) = 2.61E-2
+      E(1) = 1.70E4
+      EMISSIVITY=0.85
+      DENSITY=16.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.41
+      MATL_ID='CFL char2'
+      NU_MATL=0.59
+      CONDUCTIVITY_RAMP = 'k_FL_char'
+      SPECIFIC_HEAT = 1.30 /
+
+&MATL ID='CFL char2'
+      EMISSIVITY=0.85
+      DENSITY=9.4
+      CONDUCTIVITY_RAMP = 'k_FL_char'
+      SPECIFIC_HEAT = 1.30 /
+
+&MATL ID='BFL'
+      N_REACTIONS=1
+      A(1) = 7.95E9
+      E(1) = 1.30E5
+      EMISSIVITY=0.7
+      DENSITY=74.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.1
+      MATL_ID='BFL int'
+      NU_MATL=0.9
+      CONDUCTIVITY = 0.1
+      SPECIFIC_HEAT = 1.80 /
+
+&MATL ID='BFL int'
+      N_REACTIONS=1
+      A(1) = 2.0E11
+      E(1) = 1.60E5
+      EMISSIVITY=0.775
+      DENSITY=67.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.63
+      MATL_ID='BFL char1'
+      NU_MATL=0.37
+      HEAT_OF_REACTION=126.
+      CONDUCTIVITY_RAMP = 'k_FL_int'
+      SPECIFIC_HEAT = 1.55 /
+
+&MATL ID='BFL char1'
+      N_REACTIONS=1
+      A(1) = 2.61E-2
+      E(1) = 1.70E4
+      EMISSIVITY=0.85
+      DENSITY=25.
+      SPEC_ID='CB GAS'
+      NU_SPEC=0.41
+      MATL_ID='BFL char2'
+      NU_MATL=0.59
+      HEAT_OF_REACTION=0.
+      CONDUCTIVITY_RAMP = 'k_FL_char'
+      SPECIFIC_HEAT = 1.30 /
+
+&MATL ID='BFL char2'
+      EMISSIVITY=0.85
+      DENSITY=15.
+      CONDUCTIVITY_RAMP = 'k_FL_char'
+      SPECIFIC_HEAT = 1.30 /
+
+&MATL ID='Kaowool'
+      CONDUCTIVITY_RAMP = 'k_Kaowool'
+      SPECIFIC_HEAT = 1.07
+      DENSITY = 256. /
+
+&SURF ID='SAMPLE'
+      COLOR='BLACK'
+      MATL_ID(1,1)='LB'
+      MATL_ID(2,1)='CFL'
+      MATL_ID(3,1)='LB'
+      MATL_ID(4,1)='BFL'
+      MATL_ID(5,1)='LB'
+      MATL_ID(6,1)='Kaowool'
+      MATL_ID(1,2)='MOISTURE'
+      MATL_ID(2,2)='MOISTURE'
+      MATL_ID(3,2)='MOISTURE'
+      MATL_ID(4,2)='MOISTURE'
+      MATL_ID(5,2)='MOISTURE'
+      MATL_MASS_FRACTION(1,:) = 0.98,0.02
+      MATL_MASS_FRACTION(2,:) = 0.98,0.02
+      MATL_MASS_FRACTION(3,:) = 0.98,0.02
+      MATL_MASS_FRACTION(4,:) = 0.98,0.02
+      MATL_MASS_FRACTION(5,:) = 0.98,0.02
+      THICKNESS= 0.00064, 0.0034, 0.00064, 0.0021, 0.00064, 0.015
+      EXTERNAL_FLUX=60.
+      TMP_INNER=27.
+      HEAT_TRANSFER_COEFFICIENT=5.
+      CELL_SIZE_FACTOR=0.1
+      BACKING='INSULATED'
+      STRETCH_FACTOR=1. /
+
+&VENT XB=-0.05,0.05,-0.05,0.05,0.0,0.00, SURF_ID='SAMPLE' /
+
+&VENT MB='XMIN', SURF_ID='OPEN' /
+&VENT MB='XMAX', SURF_ID='OPEN' /
+&VENT MB='YMIN', SURF_ID='OPEN' /
+&VENT MB='YMAX', SURF_ID='OPEN' /
+&VENT MB='ZMAX', SURF_ID='OPEN' /
+
+&DUMP DT_HRR=10.0, DT_DEVC=3., SIG_FIGS=4 /
+
+&DEVC XYZ=0.0,0.0,0.0, IOR=3, QUANTITY='BURNING RATE', ID='MLR', CONVERSION_FACTOR=1000., UNITS='g/m2/s' /
+
+&TAIL / 
+
+

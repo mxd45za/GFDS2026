@@ -1,0 +1,2665 @@
+% !TEX root = FDS_Validation_Guide.tex
+
+\chapter{Heat Flux}
+
+This chapter contains a wide variety of heat flux measurements, ranging from less than a kW/m$^2$ from very small methane gas burners up to about 150~kW/m$^2$ in full-scale compartment fires. The results are broken up into two broad categories---heat flux to compartment walls, ceiling, and floor, and heat flux to ``targets''. A target is any object of interest in a fire simulation, like a steel beam or electrical cable.
+
+There are also sections that look at special cases, like the heat flux measured at a liquid fuel surface, attenuation of thermal radiation by water sprays, and convective heat flux.
+
+
+\clearpage
+
+\section{Heat Flux to Walls, Ceiling, and Floor}
+
+
+\subsection{FAA Cargo Compartments}
+
+Measurements of heat flux and surface temperature were made at two ceiling locations (denoted A and B in Fig.~\ref{FAA_Cargo_probe_locations}). The heat flux measurements are shown below.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Test_1_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Test_2_Heat_Flux} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/FAA_Cargo_Compartments/FAA_Cargo_Compartments_Test_3_Heat_Flux}}
+\end{tabular*}
+\caption[FAA Cargo Compartment experiments, heat flux to ceiling]{FAA Cargo Compartment experiments, heat flux to ceiling.}
+\end{figure}
+
+\clearpage
+
+
+\subsection{FM Parallel Panel Experiments}
+
+Predicted and measured vertical heat flux profiles for three propane and three propylene fires (30~kW, 60~kW, and 100~kW) sandwiched between two 2.4~m high, 0.6~m wide panels are presented below.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_1_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_4_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_2_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_5_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_3_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Parallel_Panel/FM_Parallel_Panel_6_Heat_Flux}
+\end{tabular*}
+\label{FM_Parallel_Panel}
+\caption[FM Parallel Panel experiments, side wall heat flux]
+{FM Parallel Panel experiments, side wall heat flux.}
+\end{figure}
+
+\clearpage
+
+
+\subsection{JH/FRA Experiments}
+
+Predicted and measured heat fluxes from 6 compartment fires are shown on the following pages.
+The heat fluxes measured in the quarter and half scale compartments are generally under-predicted by FDS; however, there is better agreement in heat flux predictions in the full-scale.
+However, the heat fluxes in the continuous flaming region near the burner were under-predicted by FDS at all scales.
+Note that all the FDS simulations were performed with a grid resolution such that $D^*/\dx$ was 10-15 at the post-flashover HRR inside the compartment.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_01_all_hfg} &
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_02_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_1}
+\caption[JH/FRA corner exp, HF to ceiling, wall, and floor 1:4 scale inert lining, Tests 1-2]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor 1:4 scale inert lining configurations, Tests 1-2.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_03_all_hfg} &
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_03A_all_hfg} \\
+%\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_04_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_2}
+\caption[JH/FRA corner exp, HF to ceiling, wall, and floor, Tests 3 and 3A]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor, Tests 3 and 3A}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_11_all_hfg} &
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_12_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_3}
+\caption[JH/FRA corner exp, heat flux to ceiling, wall, and floor Tests, Tests 6-7]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor, Tests 6-7}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_13_all_hfg} &
+%\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_14_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_4}
+\caption[JH/FRA corner exp, HF to ceiling, wall, and floor, Tests 8]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor Test, 8}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_21_all_hfg} &
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_22_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_5}
+\caption[JH/FRA corner exp, HF to the ceiling, wall, and floor, Tests 11-12]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor, Tests 11-12}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_23_all_hfg} &
+%\includegraphics[width=0.49\textwidth]{SCRIPT_FIGURES/JH_FRA/JH_FRA_compartment_24_all_hfg} \\
+\end{tabular*}
+\label{JH_FRA_HF_6}
+\caption[JH/FRA corner exp, HF to ceiling, wall, and floor, Test 13]{JH/FRA room corner experiments, heat flux to the ceiling, wall, and floor, Test 13}
+\end{figure}
+
+
+\clearpage
+
+
+
+
+
+\subsection{FM Vertical Wall Flame Experiments}
+
+Figure~\ref{FM_Vertical_Flame_Radiance} displays the measured and predicted outward flame radiance at heights of 66, 330, 594, and 990~mm above the base of the burner, for a range of burning rates. The radiance is defined as the radiant flux per unit solid angle in the outward normal direction. The radiance of an ideal black body at temperature $T$ is $\sigma T^4/\pi$.
+
+Figure~\ref{FM_Vertical_Flame_HF} displays the measured and predicted heat flux from propylene, ethane, ethylene, and methane wall fires. The fuel flow rates for propylene are 12.68, 17.05, and 22.37~g/m$^2$/s.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_Radiance_066} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_Radiance_330} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_Radiance_594} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_Radiance_990}
+\end{tabular*}
+\caption[FM Vertical Wall Flame experiments, flame radiance]
+{Flame radiance as a function of fuel flow rate at heights of 66, 330, 594, and 990~mm.}
+\label{FM_Vertical_Flame_Radiance}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_HF_12p68} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_HF_17p05} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Propylene_HF_22p37} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Ethane_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Ethylene_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Vertical_Wall_Flames/Methane_HF}
+\end{tabular*}
+\caption[FM Vertical Wall Flame experiments, centerline heat flux]
+{Vertical profiles of heat flux to the burner surface for fuel flow rates of 12.68, 17.05, and 22.37~g/m$^2$/s.}
+\label{FM_Vertical_Flame_HF}
+\end{figure}
+
+\clearpage
+
+\subsection{Lattimer Corridor Ceiling}
+
+
+Figure~\ref{Lattimer_Ceiling_Heat_Flux} displays the predicted lateral profile of heat flux to the ceiling above a propane fire in a corridor, compared to the measured value.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test1_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test2_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test3_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test4_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test5_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test6_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test7_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Corridor_Ceiling/lattimer_test8_HF} 
+\end{tabular*}
+\caption[Lattimer Corridor Ceiling, heat flux to the ceiling]{Lattimer Corridor Ceiling, predicted lateral heat flux profile (dashed lines) compared to the measured value (solid line).}
+\label{Lattimer_Ceiling_Heat_Flux}
+\end{figure}
+
+\clearpage
+
+\subsection{Lattimer Tilted Wall}
+
+Figure~\ref{Lattimer_Tilted_Wall_Heat_Flux1}-\ref{Lattimer_Tilted_Wall_Heat_Flux2} display the predicted vertical profile of heat flux to the tilted wall above a propane fire, compared to the measured values.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_00} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_11} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_23} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_35} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_49} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_67}
+\end{tabular*}
+\caption[Lattimer Tilted Wall, heat flux to the wall]{Lattimer Tilted Wall, predicted vertical heat flux profile compared to the measured values.}
+\label{Lattimer_Tilted_Wall_Heat_Flux1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_35kW_00} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_35kW_67} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_00} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_50kW_67} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_75kW_00} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Lattimer_Tilted_Wall/lattimer_tilt_75kW_67}
+\end{tabular*}
+\caption[Lattimer Tilted Wall, heat flux to the wall]{Lattimer Tilted Wall, predicted vertical heat flux profile compared to the measured values.}
+\label{Lattimer_Tilted_Wall_Heat_Flux2}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST E119 Compartment}
+
+Heat flux gauges (Gardon, Model 64-20-18) were placed at three locations in the compartment, in water-cooled steel pipes of 25~mm inside diameter. Results are shown in Fig.~\ref{NIST_E119_Compartment_Wall_Flux}. Gauge locations are shown in Fig.~\ref{NIST_E119_Compartment_Drawing_1}.
+
+\begin{figure}[!h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_E119_Compartment/Test_1_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_E119_Compartment/Test_2_Wall_Flux} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_E119_Compartment/Test_3_Wall_Flux}}
+\end{tabular*}
+\caption[NIST E119 Compartment, wall heat fluxes]{NIST E119 Compartment, wall heat fluxes.}
+\label{NIST_E119_Compartment_Wall_Flux}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST/NRC Experiments}
+
+Heat flux gauges and thermocouples were positioned at various locations on the walls, floor, and ceiling of the compartment. The locations are given in Table~\ref{NIST_NRC_Wall_Coords}. The heat flux gauges were not water cooled; thus, they measured the {\em net} rather than the {\em gauge} heat flux. However, the net heat flux is a function of the temperature of the heat flux gauge itself, which is not something that is modeled. To better compare model and measurement, the measured net heat flux is converted into a gauge heat flux using the following formula:
+\begin{equation}
+\dot{q}''_{\subscript{gauge}} = \dot{q}''_{\subscript{net}} + \sigma \left( T^4_{\subscript{gauge}} - T^4_\infty \right) + h  \left( T_{\subscript{gauge}}-T_\infty \right) \quad \hbox{kW/m}^2
+\end{equation}
+where $\sigma=5.67 \times 10^{-11}$~kW/m$^2$/K$^4$ and $h=0.005$~kW/m$^2$/K.
+
+Also, over the course of 15 experiments, numerous heat flux gauges failed, most often due to loss of contact with the wall or faulty thermocouples. All of the measurements from Test~13 and 16 were found to be flawed.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_North_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_North_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_North_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to north wall, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to north wall, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_North_Wall_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_North_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_North_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_North_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_North_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to north wall, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to north wall, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_North_Wall_Flux_Open}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_South_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_South_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_South_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to south wall, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to south wall, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_South_Wall_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_South_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_South_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_South_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_South_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to south wall, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to south wall, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_South_Wall_Flux_Open}
+\end{figure}
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_East_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_East_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_East_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to east wall, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to east wall, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_East_Wall_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_East_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_East_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_East_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_East_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to east wall, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to east wall, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_East_Wall_Flux_Open}
+\end{figure}
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_West_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_West_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_West_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to west wall, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to west wall, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_West_Wall_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_West_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_West_Wall_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_West_Wall_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_West_Wall_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to west wall, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to west wall, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_West_Wall_Flux_Open}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Floor_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to the floor, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to the floor, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_Floor_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Floor_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to the floor, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to the floor, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_Floor_Flux_Open}
+\end{figure}
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Ceiling_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Ceiling_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Ceiling_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to the ceiling, Tests 1, 2, 4, 7, 8, 10]{NIST/NRC experiments, heat flux to the ceiling, Tests 1, 2, 4, 7, 8, 10.}
+\label{NIST_NRC_Ceiling_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Ceiling_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Ceiling_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Ceiling_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Ceiling_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to the ceiling, Tests 3, 5, 9, 14, 15, 18]{NIST/NRC experiments, heat flux to the ceiling, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_Ceiling_Flux_Open}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST/NRC Parallel Panel Experiments}
+
+The left hand plot of Fig.~\ref{NIST_NRC_Parallel_Panel_fig} displays predicted and measured vertical heat flux profiles from a 60~kW propane sand burner sandwiched between two 2.4~m high, 0.6~m wide panels separated by 0.3~m. The times of 20~s, 40~s, 60~s, and 80~s correspond to burner heat release rates of 22~kW, 50~kW, 59~kW, and 63~kW. The right hand plot displays contours of heat flux measurements made between -25~cm and 25~cm in the horizontal direction and between 20~cm and 100~cm in the vertical.
+
+The bottom plot displays profiles for an experiment where the panels are lined with PMMA. The profiles are taken at various heat release rates during the growth of the fire, which peaks at approximately 3~MW.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Parallel_Panels/Marinite_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Parallel_Panels/Marinite_Heat_Flux_Contours} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC_Parallel_Panels/PMMA_Heat_Flux}}
+\end{tabular*}
+\caption[NIST/NRC Parallel Panel experiments, heat flux profiles]
+{NIST/NRC Parallel Panel experiments. Left, heat flux profile from 60~kW propane burner. Right, heat flux profiles at different stages where the panels are lined with PMMA.}
+\label{NIST_NRC_Parallel_Panel_fig}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST Reduced-Scale Enclosure (RSE) Experiments, 2007}
+
+Heat flux measurements were made on the floor in the front and rear of the compartment. The compartment was 0.95~m wide by 1.42~m deep by 0.98~m tall with a door 0.48~m wide by 0.81~m tall centered on one of the short walls.  Details of the experiments are found in Sec.~\ref{NIST_RSE_2007_Description}.
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_01_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_02_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_03_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_04_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_05_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_06_HF}
+\end{tabular*}
+\caption[Summary of Test 1, NIST RSE 2007]{Summary of heat flux measurements Test 1-6, NIST RSE 2007.}
+\label{NIST_RSE_2007_HF_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_10_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_11_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_12_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_15_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_RSE_2007/RSE_16_HF} &
+
+\end{tabular*}
+\caption[Summary of Test 2, NIST RSE 2007]{Summary of heat flux measurements Tests 10-12, 15-16, NIST RSE 2007.}
+\label{NIST_RSE_2007_HF_2}
+\end{figure}
+
+\clearpage
+
+
+\subsection{NRCC Facade Experiments}
+
+Figure~\ref{NRCC_Facade_Image} displays the simulation of a 10.3~MW fire inside and outside of a small enclosure. The purpose of the experiment was to measure the heat flux to the exterior facade. The FDS heat flux predictions are made at the location of the green points.
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[width=5.0in]{FIGURES/NRCC_Facade/NRCC_Facade_Win_2_10_MW_0467}
+\end{tabular}
+\end{center}
+\caption[Smokeview rendering of NRCC Facade experiment]
+{Smokeview rendering of one of the NRCC Facade experiments. The door is
+0.94~m by 2.70~m tall (referred to as ``Window 2'' in the comparison plots). The
+fire is 10.3~MW.}
+\label{NRCC_Facade_Image}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_1_05_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_1_06_MW} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_1_08_MW}} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_2_05_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_2_06_MW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_2_08_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_2_10_MW}
+\end{tabular*}
+\caption[NRCC Facade experiments, heat flux, window configuration 1 and 2]{NRCC Facade experiments, heat flux, window configuration 1 and 2.}
+\label{NRCC_Facade_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_3_05_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_3_06_MW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_3_08_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_3_10_MW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_4_05_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_4_06_MW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_4_08_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_4_10_MW}
+\end{tabular*}
+\caption[NRCC Facade experiments, heat flux, window configuration 3 and 4]{NRCC Facade experiments, heat flux, window configuration 3 and 4.}
+\label{NRCC_Facade_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_5_05_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_5_06_MW} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_5_08_MW} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRCC_Facade/NRCC_Facade_Win_5_10_MW}
+\end{tabular*}
+\caption[NRCC Facade experiments, heat flux, window configuration 5]{NRCC Facade experiments, heat flux, window configuration 5.}
+\label{NRCC_Facade_3}
+\end{figure}
+
+
+\clearpage
+
+
+
+\subsection{NRL/HAI Experiments}
+
+Predicted and measured vertical heat flux profiles from 9 propane sand burner fires are shown on the following pages. The parameters for each
+experiment are listed in Table~\ref{NRL/HAI_Parameters} below. Note that all the FDS simulations were performed with a grid resolution such that
+$D^*/\dx=10$.
+
+\begin{table}[ht]
+\caption[Summary of the NRL/HAI Wall Heat Flux Measurements]{Summary of the NRL/HAI Wall Heat Flux Measurements.}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+Test     & $D$     & $D^*$      & $\dot{Q}$   & $Q^*$   & Observed  Flame \\
+Number   & (m)     & (m)        & (kW)        &         & Height (m)      \\ \hline \hline
+1        & 0.28    & 0.30       &  53         & 0.85    & 0.79            \\ \hline
+2        & 0.70    & 0.30       &  56         & 0.09    & 0.36            \\ \hline
+3        & 0.48    & 0.33       &  68         & 0.28    & 0.60            \\ \hline
+4        & 0.37    & 0.39       &  106        & 0.84    & 1.00            \\ \hline
+5        & 0.48    & 0.43       &  136        & 0.57    & 0.87            \\ \hline
+6        & 0.48    & 0.51       &  204        & 0.85    & 1.45            \\ \hline
+7        & 0.70    & 0.52       &  220        & 0.36    & 1.20            \\ \hline
+8        & 0.57    & 0.60       &  313        & 0.85    & 2.20            \\ \hline
+9        & 0.70    & 0.74       &  523        & 0.85    & 2.9 (based on 500~$^\circ$C)       \\ \hline
+\end{tabular}
+\end{center}
+\label{NRL/HAI_Parameters}
+\end{table}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_1_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_2_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_3_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_4_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_5_Heat_Flux} &
+\end{tabular*}
+\label{NRL_HAI_1}
+\caption[NRL/HAI experiments, heat flux to the wall, Tests 1-5]{NRL/HAI experiments, heat flux to the wall, Tests 1-5.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_6_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_7_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_8_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NRL_HAI/NRL_HAI_9_Heat_Flux}
+\end{tabular*}
+\label{NRL_HAI_2}
+\caption[NRL/HAI experiments, heat flux to the wall, Tests 6-9]{NRL/HAI experiments, heat flux to the wall, Tests 6-9.}
+\end{figure}
+
+
+
+\clearpage
+
+\subsection{PRISME DOOR Experiments}
+
+Total and radiative heat flux gauges were positioned at various points on the walls. Each room contained a vertical array labeled, for example, FLT\_L1\_NC265. The FLT indicates a surface total heat flux measurement, L1 indicates compartment 1, which is where the fire was located, NC indicates north wall center, and 265 indicates the number of centimeters above the floor. In addition, each room contained four measurement points centered on each wall at a height of approximately 260~cm. These points are labeled, for example, FLT\_L2\_SC265, compartment 2, center of south wall, 265~cm high.
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_1_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_1_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_1_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_1_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_1_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_1_Total_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME DOOR experiments, total heat flux, vertical array, Room 1]{PRISME DOOR experiments, total heat flux, vertical array, Room 1.}
+\label{PRISME_Wall_Array_THF_Room_1}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_1_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_1_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_1_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_1_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_1_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_1_Radiative_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME DOOR experiments, radiative heat flux, vertical array, Room 1]{PRISME DOOR experiments, radiative heat flux, vertical array, Room 1.}
+\label{PRISME_Wall_Array_RHF_Room_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_1_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_1_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_1_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_1_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_1_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_1_Total_Heat_Flux_Circle}
+\end{tabular*}
+\caption[PRISME DOOR experiments, total heat flux, four walls, Room 1]{PRISME DOOR experiments, total heat flux, four walls, Room 1.}
+\label{PRISME_Wall_Circle_THF_Room_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_2_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_2_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_2_Total_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME DOOR experiments, total heat flux, vertical array, Room 2]{PRISME DOOR experiments, total heat flux, vertical array, Room 2.}
+\label{PRISME_Wall_Array_THF_Room_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_2_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_2_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_2_Radiative_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME DOOR experiments, radiative heat flux, vertical array, Room 2]{PRISME DOOR experiments, radiative heat flux, vertical array, Room 2.}
+\label{PRISME_Wall_Array_RHF_Room_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D1_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D2_Room_2_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D3_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D4_Room_2_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D5_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_D6_Room_2_Total_Heat_Flux_Circle}
+\end{tabular*}
+\caption[PRISME DOOR experiments, total heat flux, four walls, Room 2]{PRISME DOOR experiments, total heat flux, four walls, Room 2.}
+\label{PRISME_Wall_Circle_THF_Room_2}
+\end{figure}
+
+
+
+\clearpage
+
+
+\subsection{PRISME SOURCE Experiments}
+
+Total and radiative heat flux gauges were positioned at various points on the walls. Each room contained a vertical array labeled, for example, FLT\_L1\_NC265. The FLT indicates a surface total heat flux measurement, L1 indicates compartment 1, which is where the fire was located, NC indicates north wall center, and 265 indicates the number of centimeters above the floor. In addition, each room contained four measurement points centered on each wall at a height of approximately 260~cm. These points are labeled, for example, FLT\_L2\_SC265, compartment 2, center of south wall, 265~cm high.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D1_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D2_Room_2_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D3_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D4_Room_2_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5a_Room_2_Total_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6_Room_2_Total_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6a_Room_2_Total_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME SOURCE experiments, total heat flux, vertical array, Room 2]{PRISME SOURCE experiments, total heat flux, vertical array, Room 2.}
+\label{PRISME_SOURCE_Wall_Array_THF_Room_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D1_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D2_Room_2_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D3_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D4_Room_2_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5a_Room_2_Radiative_Heat_Flux_Array} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6_Room_2_Radiative_Heat_Flux_Array} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6a_Room_2_Radiative_Heat_Flux_Array}
+\end{tabular*}
+\caption[PRISME SOURCE experiments, radiative heat flux, vertical array, Room 2]{PRISME SOURCE experiments, radiative heat flux, vertical array, Room 2.}
+\label{PRISME_SOURCE_Wall_Array_RHF_Room_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D1_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D2_Room_2_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D3_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D4_Room_2_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D5a_Room_2_Total_Heat_Flux_Circle} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6_Room_2_Total_Heat_Flux_Circle} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/PRISME/PRS_SI_D6a_Room_2_Total_Heat_Flux_Circle}
+\end{tabular*}
+\caption[PRISME SOURCE experiments, total heat flux, four walls, Room 2]{PRISME SOURCE experiments, total heat flux, four walls, Room 2.}
+\label{PRISME_SOURCE_Wall_Circle_THF_Room_2}
+\end{figure}
+
+\clearpage
+
+
+\subsection{TUS Facade Experiments}
+\label{TUS_Facade_Heat_Flux}
+
+Figure~\ref{TUS_Facade_HF_Positions} indicates the location of the heat flux gauges on the outer wall of the TUS Facade experiments, described in Sec.~\ref{TUS_Facade_Description}. Figures~\ref{TUS Facade_Heat_Flux_1} through \ref{TUS Facade_Heat_Flux_4} display measured and predicted heat flux to the surface above a window out of which emanates a fire plume. The measurements have been made along three vertical lines, a, b, and c, where b is along the centerline, and a and c are along the outer edges of the window.
+
+\begin{figure}[!ht]
+\begin{minipage}{16cm}
+\setlength{\unitlength}{1.0in}
+\begin{picture}(4.0,6.0)(-1.2,0.0)
+
+\put(0.0,0.0){\framebox(3.0,5.7){ }}
+\put(0.95,0.5){\framebox(2.0,1.2){Window}}
+
+\put(1.05,2.6){\makebox(0.0,0.0){10}}
+\put(1.05,3.2){\makebox(0.0,0.0){5}}
+\put(1.05,5.8){\makebox(0.0,0.0){a}}
+
+
+\put(1.95,2.6){\makebox(0.0,0.0){9}}
+\put(1.95,2.9){\makebox(0.0,0.0){7}}
+\put(1.95,3.2){\makebox(0.0,0.0){4}}
+\put(1.95,3.7){\makebox(0.0,0.0){2}}
+\put(1.95,5.8){\makebox(0.0,0.0){b}}
+
+\put(2.85,2.6){\makebox(0.0,0.0){8}}
+\put(2.85,2.9){\makebox(0.0,0.0){6}}
+\put(2.85,3.2){\makebox(0.0,0.0){3}}
+\put(2.85,3.7){\makebox(0.0,0.0){1}}
+\put(2.85,5.8){\makebox(0.0,0.0){c}}
+
+
+\end{picture}
+\end{minipage}
+\caption[tUS Facade, position of heat flux gauges]{Positions of the heat flux gauges on the exterior wall of the TUS Facade experiments. The wall is 3~m wide and 5.7~m tall. The window is 2~m wide by 1.2~m tall and 0.5~m above the floor and 0.05~m to the left of an adjacent wall. The letters a, b, and c at top denote the vertical line.}
+\label{TUS_Facade_HF_Positions}
+\end{figure}
+
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_1_HF_Line_a} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_2_HF_Line_a} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_1_HF_Line_b} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_2_HF_Line_b} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_1_HF_Line_c} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_2_HF_Line_c}
+\end{tabular*}
+\caption[TUS Facade, heat flux, Cases 1-1 and 1-2]{TUS Facade, heat flux, Cases 1-1 and 1-2.}
+\label{TUS Facade_Heat_Flux_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_3_HF_Line_a} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_1_HF_Line_a} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_3_HF_Line_b} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_1_HF_Line_b} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_1_3_HF_Line_c} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_1_HF_Line_c}
+\end{tabular*}
+\caption[TUS Facade, heat flux, Cases 1-3 and 2-1]{TUS Facade, heat flux, Cases 1-3 and 2-1.}
+\label{TUS Facade_Heat_Flux_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_2_HF_Line_a} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_3_HF_Line_a} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_2_HF_Line_b} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_3_HF_Line_b} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_2_HF_Line_c} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_2_3_HF_Line_c}
+\end{tabular*}
+\caption[TUS Facade, heat flux, Cases 2-2 and 2-3]{TUS Facade, heat flux, Cases 2-2 and 2-3.}
+\label{TUS Facade_Heat_Flux_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_1_HF_Line_a} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_2_HF_Line_a} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_1_HF_Line_b} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_2_HF_Line_b} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_1_HF_Line_c} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/TUS_Facade/TUS_facade_I_2_HF_Line_c}
+\end{tabular*}
+\caption[TUS Facade, heat flux, Cases I-1 and I-2]{TUS Facade, heat flux, Cases I-1 and I-2.}
+\label{TUS Facade_Heat_Flux_4}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Ulster SBI Experiments}
+
+Predicted and measured vertical heat flux profiles for three propane fire sizes in the single burning item (SBI) enclosure at the University of Ulster are shown on the following page. Measurements were made on two vertical panels that form a corner, at the base of which was a triangular-shaped burner with sides of length 25~cm. Three vertical profiles were measured on each panel at distances of 3.25~cm, 16.5~cm, and 29~cm from the corner.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_30_kW_Left_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_30_kW_Right_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_45_kW_Left_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_45_kW_Right_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_60_kW_Left_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Ulster_SBI/Ulster_SBI_60_kW_Right_Heat_Flux}
+\end{tabular*}
+\label{Ulster_SBI}
+\caption[Ulster SBI experiments, corner fire heat flux]
+{Comparison of predicted (lines) and measured (circles) heat fluxes to adjacent panels forming a corner in the single
+burning item (SBI) apparatus at the University of Ulster.}
+\end{figure}
+
+\clearpage
+
+\subsection{UMD SBI Experiment}
+
+A description of this experiment is given in Sec.~\ref{UMD_SBI_Description}.
+
+Figure~\ref{UMD_SBI_HF} displays the measured and predicted heat fluxes at 28 locations on a burning vertical panel of PMMA over the course of a 3~min experiment. The measurement points are at heights of 10~cm, 30~cm, 50~cm, 70~cm, 90~cm, 110~cm, and 130~cm above the burner, and horizontal distances of 5~cm, 10~cm, 15~cm, and 22~cm from the corner of the perpendicular panels.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{llll}
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=130} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=130} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=130} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=130} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=110} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=110} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=110} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=110} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=90} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=90} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=90} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=90} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=70} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=70} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=70} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=70} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=50} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=50} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=50} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=50} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=30} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=30} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=30} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=30} \\
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=5_z=10} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=10_z=10} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=15_z=10} &
+\includegraphics[height=1.00in]{SCRIPT_FIGURES/UMD_SBI/HF_x=22_z=10}
+\end{tabular*}
+\caption[UMD SBI heat flux to PMMA panel]{UMD SBI, heat flux to PMMA panel at seven vertical locations and four lateral locations.}
+\label{UMD_SBI_HF}
+\end{figure}
+
+
+\clearpage
+
+
+\subsection{Wasson Impinging Plumes}
+
+Figure~\ref{Wasson_Heat_Flux} displays the predicted lateral profile of heat flux to the ceiling above a propane fire, compared to the measured peak value.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test1_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test2_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test3_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test4_HF} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test5_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Wasson_Impinging_Plumes/wasson_test6_HF}
+\end{tabular*}
+\caption[Wasson Impinging Plumes, heat flux to the ceiling]{Wasson Impinging Plumes, predicted lateral heat flux profile (dashed lines) compared to the measured peak value (solid line).}
+\label{Wasson_Heat_Flux}
+\end{figure}
+
+
+
+\clearpage
+
+
+\subsection{WTC Experiments}
+
+There were a variety of heat flux gauges installed in the test compartment. Most were within 2~m of the fire. Their locations and orientations are listed in Table~\ref{WTC_Gauges}. This section contains the measurements at the floor and ceiling.
+
+\begin{table}[!h]
+\caption[Heat flux gauge positions relative to the center of the fire pan in the WTC series]
+{Heat flux gauge positions relative to the center of the fire pan in the WTC series.}
+\begin{center}
+\begin{tabular}{|l|c|c|c|c|l|}
+\hline
+Name    & $x$ (m)   & $y$ (m) & $z$ (m)   & Orientation  & Location              \\ \hline \hline
+H2FU    & 0.64      & 0.63    & 3.30      &     $+z$     & Truss Support         \\ \hline
+H2RU    & 0.64      & 0.51    & 3.30      &     $+z$     & Truss Support         \\ \hline
+H2FD    & 0.64      & 0.30    & 3.15      &     $-z$     & Truss Support         \\ \hline
+H2RD    & 0.64      & 0.42    & 3.15      &     $-z$     & Truss Support         \\ \hline
+HCoHF   & -0.90     & 0.84    & 3.46      &     $+x$     & Column, facing fire   \\ \hline
+HCoHW   & -0.97     & 0.92    & 3.27      &     $+y$     & Column, facing north  \\ \hline
+HCoLF   & -0.90     & 0.84    & 0.92      &     $+x$     & Column, facing fire   \\ \hline
+HCoLW   & -0.97     & 0.92    & 1.02      &     $+y$     & Column, facing north  \\ \hline
+HF1     & 1.06      & 0.13    & 0.13      &     $+z$     & Floor                 \\ \hline
+HF2     & 1.56      & 0.10    & 0.13      &     $+z$     & Floor                 \\ \hline
+HCe1    & -0.45     & 0.35    & 3.82      &     $-z$     & Ceiling               \\ \hline
+HCe2    &  0.05     & 0.35    & 3.82      &     $-z$     & Ceiling               \\ \hline
+HCe3    &  0.80     & 0.35    & 3.82      &     $-z$     & Ceiling               \\ \hline
+HCe4    &  2.56     & 0.35    & 3.82      &     $-z$     & Ceiling               \\ \hline
+\end{tabular}
+\end{center}
+\label{WTC_Gauges}
+\end{table}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Floor_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Floor_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Floor_Flux}
+\end{tabular*}
+\caption[WTC experiments, heat flux to the floor]{WTC experiments, heat flux to the floor.}
+\label{NIST_WTC_Floor_Flux}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Ceiling_Flux_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Ceiling_Flux_1} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Ceiling_Flux_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Ceiling_Flux_1} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Ceiling_Flux_1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Ceiling_Flux_1}
+\end{tabular*}
+\caption[WTC experiments, heat flux to the ceiling]{WTC experiments, heat flux to the ceiling.}
+\label{NIST_WTC_Ceiling_Flux_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Ceiling_Flux_2} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Ceiling_Flux_2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Ceiling_Flux_2} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Ceiling_Flux_2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Ceiling_Flux_2} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Ceiling_Flux_2}
+\end{tabular*}
+\caption[WTC experiments, heat flux to the ceiling]{WTC experiments, heat flux to the ceiling.}
+\label{NIST_WTC_Ceiling_Flux_2}
+\end{figure}
+
+
+\clearpage
+
+
+\subsection{Summary of Wall, Ceiling and Floor Heat Flux Predictions}
+\label{Surface Heat Flux}
+
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Surface_Heat_Flux}
+\end{tabular}
+\end{center}
+\caption[Summary of compartment surface heat flux predictions]
+{Summary of surface heat flux predictions.}
+\label{Summary_Surface_Heat_Flux}
+\end{figure}
+
+
+
+\clearpage
+
+\section{Heat Flux to Targets}
+
+The heat flux measurements are broken up into two broad categories---heat flux to walls, floors, and ceiling, and heat flux to ``targets''. A target is any object of interest in a fire, like a steel beam or electrical cable. The following subsections consider heat flux to targets.
+
+
+\subsection{Fleury Experiments}
+
+The plots on the following pages contain comparisons of predicted and measured heat fluxes from a series of propane burner fires. Heat flux gauges were mounted on moveable dollies that were placed in front of, and to the side of, burners with dimensions of 0.3~m by 0.3~m (1:1 burner), 0.6~m by 0.3~m (2:1 burner), and 0.9~m by 0.3~m (3:1 burner). The heat release rates were set to 100~kW, 150~kW, 200~kW, 250~kW, and 300~kW. The gauges were mounted at heights of 0~m, 0.5~m, 1.0~m, and 1.5~m relative to the top edge of the burner. Each page contains the results for a given HRR.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_100_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_100_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_100_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_100_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_100_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_100_kW_Side_Heat_Flux}
+\end{tabular*}
+\label{Fleury_Heat_Flux_100_kW}
+\caption[Fleury Heat Flux, 100 kW fires]
+{Comparison of predicted (lines) and measured (circles) heat flux for the 100~kW Fleury fires.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_150_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_150_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_150_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_150_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_150_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_150_kW_Side_Heat_Flux}
+\end{tabular*}
+\label{Fleury_Heat_Flux_150_kW}
+\caption[Fleury Heat Flux, 150 kW fires]
+{Comparison of predicted (lines) and measured (circles) heat flux for the 150~kW Fleury fires.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_200_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_200_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_200_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_200_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_200_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_200_kW_Side_Heat_Flux}
+\end{tabular*}
+\label{Fleury_Heat_Flux_200_kW}
+\caption[Fleury Heat Flux, 200 kW fires]
+{Comparison of predicted (lines) and measured (circles) heat flux for the 200~kW Fleury fires.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_250_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_250_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_250_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_250_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_250_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_250_kW_Side_Heat_Flux}
+\end{tabular*}
+\label{Fleury_Heat_Flux_250_kW}
+\caption[Fleury Heat Flux, 250 kW fires]
+{Comparison of predicted (lines) and measured (circles) heat flux for the 250~kW Fleury fires.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_300_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_1t1_300_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_300_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_2t1_300_kW_Side_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_300_kW_Front_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Fleury_Heat_Flux/Fleury_3t1_300_kW_Side_Heat_Flux}
+\end{tabular*}
+\label{Fleury_Heat_Flux_300_kW}
+\caption[Fleury Heat Flux, 300 kW fires]
+{Comparison of predicted (lines) and measured (circles) heat flux for the 300~kW Fleury fires.}
+\end{figure}
+
+\clearpage
+
+\subsection{Hamins Gas Burner Experiments}
+
+Predicted and measured radial and vertical heat flux profiles from 30 methane, 34 propane, and 16 acetylene gas burner fire experiments conducted by Anthony Hamins~\cite{Hamins:TN2016} are displayed in this section. The relevant information about the fires is included in Tables~\ref{Hamins_Methane_Table}, \ref{Hamins_Propane_Table}, and \ref{Hamins_Acetylene_Table}. In each table, $D$ is the diameter of the burner and $R_0$ is the radial distance from the burner centerline to the position of the vertical heat flux measurements. $\dot{Q}$ is the product of the mass loss rate, $\dot{m}$, and the heat of combustion. The heat of combustion of acetylene is 48.2~kJ/g; and for propane, 46.4~kJ/g. For the methane experiments, either methane (50.03~kJ/g) or natural gas (49.4~kJ/g) was used. $\dot{Q}''$ is the heat release rate per unit area, and
+\be
+   \dot{Q}^* = \frac{\dot{Q}}{\rho_\infty \, T_\infty \, c_p \, \sqrt{g D} \, D^2 }   \quad ; \quad    D^* = \left( \frac{\dot{Q}}{\rho_\infty \, T_\infty \, c_p \, \sqrt{g} } \right)^{2/5}
+\ee
+Note that in the test matrices, the values to the right of the double lines indicate parameters used in the simulations.  The values for radiative fraction, $\chi_{\rm rad}$, are suggested by Hamins~\cite{Hamins:TN2016}. The quantity $D^*/\delta x$ is an indicator of grid resolution, where $D^*$ is the characteristic burner dimension and $\delta x$ is the grid cell size.
+
+\newpage
+
+\subsubsection{Methane Experiments}
+
+\begin{table}[!ht]
+\caption[Parameters of the Hamins methane burner experiments]{Parameters of the Hamins methane burner experiments. The asterisk after the Test No. indicates that natural gas was used as fuel. The soot and CO yields were assumed to be zero.}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c||c|c|}
+\hline
+Test      & $D$      & $R_0$      & $\dot{Q}$   &  $\dot{m}$            &  $\dot{Q}''$   &               &            &          \\
+No.       & (m)      & (m)        & (kW)        &  (g/s)                &  (kW/m$^2$)    & \raisebox{1.5ex}[0pt]{$\dot{Q}^*$} & \raisebox{1.5ex}[0pt]{$\chi_{\rm rad}$} & \raisebox{1.5ex}[0pt]{$D^*/\delta x$} \\ \hline \hline
+1         & 0.1      & 0.13       & 0.42        &  0.0085               &  53.5          & 0.12          & 0.13       & 8.6     \\ \hline
+2         & 0.1      & 0.13       & 0.61        &  0.0122               &  77.7          & 0.18          & 0.13       & 10.0     \\ \hline
+3         & 0.1      & 0.13       & 0.78        &  0.0155               &  99.3          & 0.22          & 0.13       & 11.0     \\ \hline
+4         & 0.1      & 0.13       & 1.11        &  0.0222               &  141.3         & 0.32          & 0.16       & 12.7      \\ \hline
+5         & 0.1      & 0.13       & 1.89        &  0.0378               &  240.6         & 0.54          & 0.16       & 15.7      \\ \hline
+6*        & 0.35     & 0.40       & 11.2        &  0.226                &  115.9         & 0.14          & 0.08       & 6.4      \\ \hline
+7*        & 0.35     & 0.40       & 15.3        &  0.310                &  159.0         & 0.19          & 0.10       & 7.2      \\ \hline
+8*        & 0.35     & 0.40       & 10.5        &  0.212                &  109.0         & 0.13          & 0.08       & 6.2      \\ \hline
+9*        & 0.35     & 0.40       & 6.67        &  0.135                &  69.3          & 0.08          & 0.07       & 5.2      \\ \hline
+10*       & 0.35     & 0.64       & 19.3        &  0.391                &  200.7         & 0.24          & 0.12       & 7.9      \\ \hline
+11*       & 0.35     & 0.63       & 27.0        &  0.546                &  280.3         & 0.34          & 0.15       & 9.1      \\ \hline
+12*       & 0.35     & 0.81       & 40.6        &  0.822                &  422.2         & 0.51          & 0.18       & 10.7      \\ \hline
+13*       & 0.35     & 0.92       & 63.5        &  1.285                &  659.9         & 0.80          & 0.21       & 12.8       \\ \hline
+14*       & 0.35     & 0.92       & 90.3        &  1.828                &  938.7         & 1.13          & 0.22       & 14.7       \\ \hline
+15        & 0.35     & 0.92       & 178         &  3.567                &  1854.6        & 2.24          & 0.20       & 19.3       \\ \hline
+16        & 0.35     & 0.92       & 210         &  4.194                &  2180.8        & 2.63          & 0.20       & 20.6       \\ \hline
+17        & 0.35     & 0.92       & 34.0        &  0.679                &  353.2         & 0.43          & 0.16       & 9.9      \\ \hline
+18        & 0.35     & 0.90       & 145         &  2.904                &  1510.0        & 1.82          & 0.28       & 17.8       \\ \hline
+19        & 0.35     & 0.90       & 125         &  2.495                &  1297.7        & 1.56          & 0.23       & 16.7       \\ \hline
+20*       & 1.0      & 1.00       & 49.0        &  0.997                &  62.4          & 0.04          & 0.14       & 5.8      \\ \hline
+21*       & 1.0      & 1.00       & 81.0        &  1.648                &  103.1         & 0.07          & 0.15       & 7.0      \\ \hline
+22*       & 1.0      & 1.00       & 112         &  2.282                &  142.8         & 0.10          & 0.17       & 8.0       \\ \hline
+23*       & 1.0      & 1.00       & 129         &  2.635                &  164.8         & 0.12          & 0.18       & 8.5       \\ \hline
+24*       & 1.0      & 0.79       & 52.7        &  1.069                &  67.1          & 0.05          & 0.12       & 5.9      \\ \hline
+25*       & 1.0      & 0.79       & 69.7        &  1.414                &  88.8          & 0.06          & 0.12       & 6.6      \\ \hline
+26*       & 1.0      & 0.79       & 87.3        &  1.771                &  111.2         & 0.08          & 0.13       & 7.3       \\ \hline
+27*       & 1.0      & 0.79       & 102         &  2.081                &  130.6         & 0.09          & 0.13       & 7.7       \\ \hline
+28*       & 1.0      & 0.79       & 121         &  2.462                &  154.5         & 0.11          & 0.14       & 8.3       \\ \hline
+29*       & 1.0      & 0.79       & 138         &  2.793                &  175.3         & 0.12          & 0.16       & 8.7       \\ \hline
+30*       & 1.0      & 0.79       & 172         &  3.482                &  218.5         & 0.16          & 0.18       & 9.5       \\ \hline
+\end{tabular}
+\end{center}
+\label{Hamins_Methane_Table}
+\end{table}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M1_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M1_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M2_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M2_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M3_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M3_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M4_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M4_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_1-4}
+\caption[Heat flux predictions, Hamins methane burner Tests 1-4]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 1-4.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M5_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M5_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M6_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M6_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M7_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M7_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M8_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M8_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_5-8}
+\caption[Heat flux predictions, Hamins methane burner Tests 5-8]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 5-8.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M9_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M9_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M10_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M10_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M11_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M11_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M12_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M12_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_9-12}
+\caption[Heat flux predictions, Hamins methane burner Tests 9-12]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 9-12.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M13_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M13_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M14_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M14_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M15_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M15_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M16_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M16_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_13-16}
+\caption[Heat flux predictions, Hamins methane burner Tests 13-16]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 13-16.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M17_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M17_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M18_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M18_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M19_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M19_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M20_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M20_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_17-20}
+\caption[Heat flux predictions, Hamins methane burner Tests 17-20]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 17-20.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M21_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M21_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M22_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M22_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M23_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M23_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M24_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M24_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_21-24}
+\caption[Heat flux predictions, Hamins methane burner Tests 21-24]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 21-24.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M25_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M25_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M26_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M26_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M27_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M27_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M28_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M28_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_25-28}
+\caption[Heat flux predictions, Hamins methane burner Tests 25-28]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 25-28.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M29_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M29_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M30_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/M30_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Methane_29-30}
+\caption[Heat flux predictions, Hamins methane burner Tests 29-30]
+{Comparison of predicted and measured heat fluxes, Hamins Methane Tests 29-30.}
+\end{figure}
+
+\clearpage
+
+\subsubsection{Propane Experiments}
+
+\begin{table}[!h]
+\caption[Parameters of the Hamins propane burner experiments]{Parameters of the Hamins propane burner experiments. Note that in all cases, the soot and CO yields were taken to be 0.024 and 0.005, respectively, based on the measurements of Tewarson~\cite{SFPE:Tewarson}.}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c||c|c|}
+\hline
+Test     & $D$      & $R_0$      & $\dot{Q}$   &  $\dot{m}$            &  $\dot{Q}''$   &               &           &           \\
+No.      & (m)      & (m)        & (kW)        &  (kg/s)               &  (kW/m$^2$)    & \raisebox{1.5ex}[0pt]{$\dot{Q}^*$} & \raisebox{1.5ex}[0pt]{$\chi_{\rm rad}$} & \raisebox{1.5ex}[0pt]{$D^*/\delta x$} \\ \hline \hline
+1        & 0.1      & 0.26       & 2.7         &  0.058                &  343.8         & 0.78          & 0.22      & 9.0          \\ \hline
+2        & 0.1      & 0.26       & 6.8         &  0.148                &  870.9         & 1.96          & 0.27      & 13.1          \\ \hline
+3        & 0.1      & 0.26       & 11.8        &  0.254                &  1499.9        & 3.38          & 0.29      & 16.3          \\ \hline
+4        & 0.1      & 0.37       & 17.9        &  0.386                &  2277.8        & 5.14          & 0.29      & 19.2          \\ \hline
+5        & 0.1      & 0.37       & 25.2        &  0.543                &  3203.5        & 7.22          & 0.30      & 22.1          \\ \hline
+6        & 0.1      & 0.49       & 36.9        &  0.796                &  4698.3        & 10.6          & 0.30      & 25.7          \\ \hline
+7        & 0.1      & 0.13       & 0.4         &  0.010                &  56.0          & 0.13          & 0.12      & 4.4          \\ \hline
+8        & 0.1      & 0.13       & 0.8         &  0.017                &  99.3          & 0.22          & 0.12      & 5.5          \\ \hline
+9        & 0.1      & 0.13       & 0.6         &  0.013                &  76.4          & 0.17          & 0.12      & 4.9          \\ \hline
+10       & 0.1      & 0.13       & 1.0         &  0.021                &  123.5         & 0.28          & 0.15      & 6.0          \\ \hline
+11       & 0.1      & 0.13       & 1.4         &  0.031                &  183.3         & 0.41          & 0.18      & 7.0          \\ \hline
+12       & 0.1      & 0.13       & 2.2         &  0.046                &  273.7         & 0.62          & 0.23      & 8.2          \\ \hline
+13       & 0.1      & 0.19       & 3.4         &  0.074                &  434.2         & 0.98          & 0.24      & 9.9          \\ \hline
+14       & 0.1      & 0.19       & 5.6         &  0.122                &  718.1         & 1.62          & 0.26      & 12.1          \\ \hline
+15       & 0.1      & 0.28       & 11.9        &  0.257                &  1513.9        & 3.41          & 0.26      & 16.3          \\ \hline
+16       & 0.1      & 0.28       & 24.8        &  0.535                &  3156.4        & 7.12          & 0.29      & 21.9          \\ \hline
+17       & 0.35     & 0.92       & 33.9        &  0.732                &  352.8         & 0.43          & 0.25      & 9.9          \\ \hline
+18       & 0.35     & 0.92       & 124.9       &  2.694                &  1298.1        & 1.56          & 0.30      & 16.7          \\ \hline
+19       & 0.35     & 0.57       & 20.0        &  0.431                &  207.9         & 0.25          & 0.18      & 8.0          \\ \hline
+20       & 0.35     & 0.57       & 15.6        &  0.336                &  162.0         & 0.20          & 0.14      & 7.3          \\ \hline
+21       & 0.35     & 0.39       & 19.0        &  0.409                &  197.3         & 0.24          & 0.13      & 7.9          \\ \hline
+22       & 0.35     & 0.39       & 14.6        &  0.316                &  152.2         & 0.18          & 0.10      & 7.1          \\ \hline
+23       & 0.35     & 0.68       & 108.2       &  2.334                &  1124.5        & 1.36          & 0.29      & 15.8          \\ \hline
+24       & 0.35     & 0.68       & 102.3       &  2.207                &  1063.7        & 1.28          & 0.31      & 15.5          \\ \hline
+25       & 0.35     & 0.68       & 79.7        &  1.719                &  828.4         & 1.00          & 0.28      & 14.0          \\ \hline
+26       & 0.35     & 0.51       & 12.0        &  0.258                &  124.5         & 0.15          & 0.08      & 6.6          \\ \hline
+27       & 1.0      & 0.81       & 55.2        &  1.190                &  70.2          & 0.05          & 0.11      & 6.0          \\ \hline
+28       & 1.0      & 0.81       & 81.7        &  1.761                &  104.0         & 0.07          & 0.15      & 7.1          \\ \hline
+29       & 1.0      & 0.81       & 107.3       &  2.315                &  136.7         & 0.10          & 0.18      & 7.9          \\ \hline
+30       & 1.0      & 1.00       & 136.4       &  2.943                &  173.7         & 0.12          & 0.22      & 8.7          \\ \hline
+31       & 1.0      & 0.97       & 55.6        &  1.199                &  70.8          & 0.05          & 0.12      & 6.1          \\ \hline
+32       & 1.0      & 0.97       & 82.5        &  1.779                &  105.0         & 0.07          & 0.14      & 7.1          \\ \hline
+33       & 1.0      & 0.97       & 107.9       &  2.326                &  137.3         & 0.10          & 0.17      & 7.9          \\ \hline
+34       & 1.0      & 0.97       & 137.3       &  2.963                &  174.9         & 0.12          & 0.23      & 8.7          \\ \hline
+\end{tabular}
+\end{center}
+\label{Hamins_Propane_Table}
+\end{table}
+
+\newpage
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P1_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P1_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P2_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P2_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P3_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P3_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P4_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P4_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_1-4}
+\caption[Heat flux predictions, Hamins propane burner Tests 1-4]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 1-4.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P5_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P5_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P6_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P6_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P7_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P7_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P8_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P8_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_5-8}
+\caption[Heat flux predictions, Hamins propane burner Tests 5-8]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 5-8.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P9_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P9_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P10_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P10_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P11_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P11_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P12_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P12_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_9-12}
+\caption[Heat flux predictions, Hamins propane burner Tests 9-12]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 9-12.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P13_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P13_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P14_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P14_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P15_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P15_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P16_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P16_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_13-16}
+\caption[Heat flux predictions, Hamins propane burner Tests 13-16]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 13-16.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P17_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P17_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P18_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P18_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P19_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P19_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P20_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P20_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_17-20}
+\caption[Heat flux predictions, Hamins propane burner Tests 17-20]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 17-20.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P21_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P21_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P22_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P22_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P23_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P23_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P24_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P24_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_21-24}
+\caption[Heat flux predictions, Hamins propane burner Tests 21-24]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 21-24.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P25_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P25_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P26_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P26_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P27_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P27_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P28_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P28_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_25-28}
+\caption[Heat flux predictions, Hamins propane burner Tests 25-28]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 25-28.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P29_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P29_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P30_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P30_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P31_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P31_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P32_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P32_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_29-32}
+\caption[Heat flux predictions, Hamins propane burner Tests 29-32]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 29-32.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P33_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P33_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P34_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/P34_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Propane_33-34}
+\caption[Heat flux predictions, Hamins propane burner Tests 33-34]
+{Comparison of predicted and measured heat fluxes, Hamins Propane Tests 33-34.}
+\end{figure}
+
+\clearpage
+
+\subsubsection{Acetylene Experiments}
+
+\begin{table}[ht]
+\caption[Parameters of the Hamins acetylene burner experiments]{Parameters of the Hamins acetylene burner experiments. Note that in all cases, the soot and CO yields were taken to be 0.096 and 0.042, respectively, based on the measurements of Tewarson~\cite{SFPE:Tewarson}.}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c||c|c|}
+\hline
+Test     & $D$      & $R_0$      & $\dot{Q}$   &  $\dot{m}$            &  $\dot{Q}''$   &               &         &             \\
+No.      & (m)      & (m)        & (kW)        &  (kg/s)               &  (kW/m$^2$)    & \raisebox{1.5ex}[0pt]{$\dot{Q}^*$} & \raisebox{1.5ex}[0pt]{$\chi_{\rm rad}$} & \raisebox{1.5ex}[0pt]{$D^*/\delta x$} \\ \hline \hline
+1        & 0.10     & 0.13       & 0.45        &  0.009                &  57.3          & 0.13         & 0.12     & 4.4             \\ \hline
+2        & 0.10     & 0.13       & 0.56        &  0.012                &  71.3          & 0.16         & 0.15     & 4.8             \\ \hline
+3        & 0.10     & 0.13       & 0.90        &  0.019                &  114.6         & 0.26         & 0.18     & 5.8             \\ \hline
+4        & 0.10     & 0.13       & 1.29        &  0.027                &  164.2         & 0.37         & 0.27     & 6.7             \\ \hline
+5        & 0.10     & 0.13       & 1.54        &  0.032                &  196.1         & 0.44         & 0.31     & 7.2             \\ \hline
+6        & 0.35     & 0.39       & 12.5        &  0.259                &  129.9         & 0.16         & 0.13     & 6.7             \\ \hline
+7        & 0.35     & 0.51       & 11.0        &  0.229                &  114.3         & 0.14         & 0.09     & 6.3             \\ \hline
+8        & 0.35     & 0.51       & 20.4        &  0.424                &  212.0         & 0.26         & 0.22     & 8.1             \\ \hline
+9        & 0.35     & 0.51       & 31.3        &  0.648                &  325.3         & 0.39         & 0.33     & 9.6             \\ \hline
+10       & 0.35     & 0.69       & 38.2        &  0.793                &  397.0         & 0.48         & 0.38     & 10.4             \\ \hline
+11       & 0.35     & 0.69       & 48.0        &  1.000                &  498.9         & 0.60         & 0.41     & 11.4             \\ \hline
+12       & 0.35     & 0.69       & 62.4        &  1.290                &  648.6         & 0.78         & 0.42     & 12.7             \\ \hline
+13       & 0.35     & 0.69       & 76.3        &  1.580                &  793.0         & 0.96         & 0.43     & 13.8             \\ \hline
+14       & 0.35     & 0.69       & 109.2       &  2.270                &  1135.0        & 1.37         & 0.44     & 15.9             \\ \hline
+15       & 0.35     & 0.69       & 117.2       &  2.430                &  1218.2        & 1.47         & 0.43     & 16.3             \\ \hline
+16       & 0.35     & 0.69       & 134.7       &  2.790                &  1400.0        & 1.69         & 0.46     & 17.3             \\ \hline
+\end{tabular}
+\end{center}
+\label{Hamins_Acetylene_Table}
+\end{table}
+
+\newpage
+
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A1_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A1_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A2_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A2_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A3_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A3_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A4_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A4_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Acetylene_1-4}
+\caption[Heat flux predictions, Hamins acetylene burner Tests 1-4]
+{Comparison of predicted and measured heat fluxes, Hamins Acetylene Tests 1-4.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A5_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A5_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A6_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A6_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A7_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A7_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A8_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A8_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Acetylene_5-8}
+\caption[Heat flux predictions, Hamins acetylene burner Tests 5-8]
+{Comparison of predicted and measured heat fluxes, Hamins Acetylene Tests 5-8.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A9_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A9_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A10_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A10_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A11_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A11_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A12_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A12_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Acetylene_9-12}
+\caption[Heat flux predictions, Hamins acetylene burner Tests 9-12]
+{Comparison of predicted and measured heat fluxes, Hamins Acetylene Tests 9-12.}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A13_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A13_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A14_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A14_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A15_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A15_Vertical_Heat_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A16_Radial_Heat_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Hamins_Gas_Burners/A16_Vertical_Heat_Flux}
+\end{tabular*}
+\label{Hamins_Acetylene_13-16}
+\caption[Heat flux predictions, Hamins acetylene burner Tests 13-16]
+{Comparison of predicted and measured heat fluxes, Hamins Acetylene Tests 13-16.}
+\end{figure}
+
+\clearpage
+
+\subsection{BGC/GRI LNG Fires}
+\label{BGC_GRI_LNG_Fires_Heat_Flux}
+
+A description of the 13 LNG trench fire experiments is given in Sec.~\ref{BGC_GRI_LNG_Fires_Description}.
+
+Figures~\ref{Croce_Heat_Flux_1} and \ref{Croce_Heat_Flux_2} compare predicted and measured heat fluxes to radiometers at various distances from the LNG trench fire. The general layout of the facility is shown in Fig.~\ref{BGC_Layout}. The radiometers were positioned approximately 1.2~m off the ground along the axis lines shown in the figure. The wind direction was typically perpendicular to the longer dimension of the trench.
+
+
+\begin{figure}[!ht]
+\begin{minipage}{10cm}
+\setlength{\unitlength}{1.0cm}
+\begin{picture}(8.0,8.0)(0.0,0.0)
+\thicklines
+\put(5.0,3.75){\framebox(3.0,0.5){}}
+\thinlines
+\put(6.5,4.0){\circle*{0.1}}
+\put(6.5,4.0){\vector(-1,0){6.5}}
+\put(1.0,3.5){Lateral Radiometers}
+\put(6.5,4.0){\vector(0,-1){4.0}}
+\put(2.5,2.0){Upwind Radiometers}
+\put(6.5,4.0){\vector(0,1){4.0}}
+\put(2.5,6.0){Downwind Radiometers}
+\put(6.7,3.85){Trench}
+\end{picture}
+\end{minipage}
+\hfill
+\begin{minipage}{6cm}
+\begin{tabular}{|c|c|c|}
+\hline
+\multicolumn{3}{|c|}{Trench Dimensions} \\ \hline
+Test & Length (m) & Width (m) \\ \hline
+1    & 23.53      & 1.81      \\
+2    & 15.52      & 1.81      \\
+3    & 9.23       & 1.83      \\
+4    & 23.50      & 1.83      \\
+5    & 9.05       & 1.82      \\
+6    & 23.45      & 3.94      \\
+7    & 23.45      & 0.82      \\
+8    & 11.82      & 0.82      \\
+9    & 9.10       & 0.82      \\
+10   & 52.05      & 3.89      \\
+11   & 4.37       & 0.81      \\
+12   & 52.15      & 1.82      \\
+13   & 23.10      & 0.77      \\
+\hline
+\end{tabular}
+\end{minipage}
+\caption[Schematic diagram of BGC/GRI test facility]{Schematic diagram of BGC/GRI test facility.}
+\label{BGC_Layout}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_01_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_02_Heat_Flux_Profile} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_03_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_04_Heat_Flux_Profile} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_05_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_06_Heat_Flux_Profile} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_07_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_08_Heat_Flux_Profile}
+\end{tabular*}
+\caption[BGC/GRI LNG Fires, heat flux profiles for Tests 1-8]{BGC/GRI LNG Fires, heat flux profiles for Tests 1-8.}
+\label{Croce_Heat_Flux_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_09_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_10_Heat_Flux_Profile} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_11_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_12_Heat_Flux_Profile} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/BGC_GRI_LNG_Fires/Croce_13_Heat_Flux_Profile} }
+\end{tabular*}
+\caption[BGC/GRI LNG Fires, heat flux profiles for Tests 9-13]{BGC/GRI LNG Fires, heat flux profiles for Tests 9-13.}
+\label{Croce_Heat_Flux_2}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Loughborough Jet Fire Experiments}
+\label{Loughborough_Jet_Fires_Heat_Flux}
+
+A brief description of the experiments and modeling is found in Sec.~\ref{Loughborough_Jet_Fires_Description}.
+
+The plots on the following pages present near-field and far-field heat flux measurements of natural gas jet fires. Figures~\ref{Loughborough_1} through \ref{Loughborough_3} compare measured and predicted heat fluxes to a 0.9~m diameter, 16~m long pipe segment engulfed in the fire. The locations of the gauges are shown in Fig.~\ref{Loughborough_gauge}.
+
+Figure~\ref{Loughborough_Rad} presents the far-field radiometer predictions and measurements. Table~\ref{Loughborough_rads} lists the radiometer coordinates relative to the center of the target pipe.
+
+\begin{figure}[!ht]
+
+\setlength{\unitlength}{.75in}
+\begin{picture}(8.0,4.0)(-4.6,-0.4)
+\thicklines
+\put(-3.8,0.0){\framebox(7.4,3.2){}}
+\thinlines
+\multiput(-3.8,0.4)(0.0,0.4){7}{\line(1,0){7.4}}
+\multiput(-3.0,0.0)(0.6,0.0){8}{\line(0,1){3.2}}
+\put(2.4,0.0){\line(0,1){3.2}}
+\put(-4.0,-0.3){-3.8 m}
+\put(-3.2,-0.3){-3.0}
+\put(-2.6,-0.3){-2.4}
+\put(-2.0,-0.3){-1.8}
+\put(-1.4,-0.3){-1.2}
+\put(-0.8,-0.3){-0.6}
+\put(-0.2,-0.3){ 0.0}
+\put( 0.4,-0.3){ 0.6}
+\put( 1.0,-0.3){ 1.2}
+\put( 2.2,-0.3){ 2.4}
+\put( 3.4,-0.3){ 3.6}
+\put(-4.6,-0.05){Top}
+\put(-4.6, 0.75){Back}
+\put(-4.6, 1.55){Bottom}
+\put(-4.6, 2.35){Front}
+\put(-4.6, 3.15){Top}
+\put(-2.97, 0.03){\footnotesize C01}
+\put(-2.37, 0.03){\footnotesize C02}
+\put(-1.77, 0.03){\footnotesize C03}
+\put(-1.17, 0.03){\footnotesize C04}
+\put( 0.03, 0.03){\footnotesize C05}
+\put( 0.63, 0.03){\footnotesize C06}
+\put( 1.23, 0.03){\footnotesize C07}
+\put( 2.43, 0.03){\footnotesize C08}
+\put(-3.77, 2.43){\footnotesize C12}
+\put(-2.37, 2.43){\footnotesize C13}
+\put(-1.77, 2.43){\footnotesize C14}
+\put(-1.17, 2.43){\footnotesize C15}
+\put(-0.57, 2.43){\footnotesize C16}
+\put( 0.03, 2.43){\footnotesize C17}
+\put( 0.63, 2.43){\footnotesize C18}
+\put( 1.23, 2.43){\footnotesize C19}
+\put( 2.43, 2.43){\footnotesize C20}
+\put( 3.63, 2.43){\footnotesize C21}
+\put(-2.37, 1.63){\footnotesize C25}
+\put(-1.17, 1.63){\footnotesize C26}
+\put( 0.03, 1.63){\footnotesize C27}
+\put( 0.63, 1.63){\footnotesize C28}
+\put( 1.23, 1.63){\footnotesize C29}
+\put( 2.43, 1.63){\footnotesize C30}
+\put(-3.77, 0.83){\footnotesize C32}
+\put(-2.37, 0.83){\footnotesize C33}
+\put(-1.17, 0.83){\footnotesize C34}
+\put( 0.03, 0.83){\footnotesize C35}
+\put( 1.23, 0.83){\footnotesize C36}
+\put( 2.43, 0.83){\footnotesize C37}
+\put(-2.97, 3.23){\footnotesize C01}
+\put(-2.37, 3.23){\footnotesize C02}
+\put(-1.77, 3.23){\footnotesize C03}
+\put(-1.17, 3.23){\footnotesize C04}
+\put( 0.03, 3.23){\footnotesize C05}
+\put( 0.63, 3.23){\footnotesize C06}
+\put( 1.23, 3.23){\footnotesize C07}
+\put( 2.43, 3.23){\footnotesize C08}
+\multiput(-3.0,0.0)(0.6,0.0){4}{\circle*{0.05}}
+\multiput( 0.0,0.0)(0.6,0.0){3}{\circle*{0.05}}
+\multiput( 2.4,0.0)(0.0,0.8){5}{\circle*{0.05}}
+\multiput(-3.8,0.8)(0.0,0.0){1}{\circle*{0.05}}
+\multiput(-2.4,0.8)(1.2,0.0){4}{\circle*{0.05}}
+\multiput(-2.4,1.6)(1.2,0.0){4}{\circle*{0.05}}
+\multiput(-2.4,2.4)(0.6,0.0){7}{\circle*{0.05}}
+\multiput(-3.0,3.2)(0.6,0.0){4}{\circle*{0.05}}
+\multiput( 0.0,3.2)(0.6,0.0){3}{\circle*{0.05}}
+\multiput(-3.8,2.4)(0.6,0.0){1}{\circle*{0.05}}
+\multiput( 3.6,2.4)(0.6,0.0){1}{\circle*{0.05}}
+\multiput( 0.6,1.6)(0.6,0.0){1}{\circle*{0.05}}
+\end{picture}
+
+\caption[Location of heat flux gauges, Loughborough Jet Fires]{Location of the heat flux gauges mounted on the target pipe segment for the Loughborough Jet Fires. The pipe is oriented in the north-south direction, with the negative positions to the north. The ``Front'' of the pipe faces the jet.}
+\label{Loughborough_gauge}
+\end{figure}
+
+\begin{table}[!ht]
+\caption[Radiometer positions, Loughborough Jet Fires]{Radiometer positions (m) relative to the center of the target pipe, Loughborough Jet Fires.}
+\centering
+\begin{tabular}{|c|ccccccccc|}
+\hline
+Test     & Rad 1  & Rad 2   & Rad 3   & Rad 4   & Rad 5   & Rad 6   & Rad 7   & Rad 8   & Rad 9    \\
+No.      & (N,W)  & (N,W)   & (N,W)   & (S,W)   & (S,W)   & (S,W)   & (S,W)   & (S,W)   & (S,W)    \\ \hline
+1        & (20,5) & (15,0)  & (15,5)  & (15,0)  & (15,5)  & (20,0)  & (20,5)  & (25,0)  & (30,0)   \\
+2        & (30,0) & (20,0)  & (20,5)  & (15,0)  & (20,0)  & (20,5)  & (30,0)  & (30,5)  & (40,0)   \\
+3        & (35,0) & (25,0)  & (25,5)  & (20,0)  & (25,0)  & (25,5)  & (35,0)  & (35,5)  & (52,0)   \\ \hline
+\end{tabular}
+\label{Loughborough_rads}
+\end{table}
+
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_top_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_top_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_front_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_front_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_bottom_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_bottom_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_back_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_HF_back_S}
+\end{tabular*}
+\caption[Loughborough Jet Fires, heat flux to pipe, Test 1]{Loughborough Jet Fires, heat flux to pipe, Test 1.}
+\label{Loughborough_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_top_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_top_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_front_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_front_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_bottom_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_bottom_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_HF_back_N} &
+\end{tabular*}
+\caption[Loughborough Jet Fires, heat flux to pipe, Test 2]{Loughborough Jet Fires, heat flux to pipe, Test 2.}
+\label{Loughborough_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_top_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_top_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_front_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_front_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_bottom_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_bottom_S} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_back_N} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_HF_back_S}
+\end{tabular*}
+\caption[Loughborough Jet Fires, heat flux to pipe, Test 3]{Loughborough Jet Fires, heat flux to pipe, Test 3.}
+\label{Loughborough_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_Rad_North} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet1_Rad_South} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_Rad_North} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet2_Rad_South} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_Rad_North} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Loughborough_Jet_Fires/jet3_Rad_South}
+\end{tabular*}
+\caption[Loughborough Jet Fires, far-field radiometers]{Loughborough Jet Fires, far-field radiometers.}
+\label{Loughborough_Rad}
+\end{figure}
+
+
+\clearpage
+
+\subsection{Montoir LNG Fires}
+\label{Montoir_LNG_Fires_Heat_Flux}
+
+A brief description of these experiments can be found in Sec.~\ref{Montoir_LNG_Fires_Description}. Figure~\ref{Montoir_Layout} indicates the radial lines emanating outward from the 35~m pool along which the radiometers were positioned. Figures~\ref{Montoir_HF_1} through \ref{Montoir_HF_3} display the results of measured and predicted heat fluxes along the radial lines.
+
+\begin{figure}[!ht]
+\begin{minipage}{16cm}
+\setlength{\unitlength}{1.0cm}
+\begin{picture}(8.0,8.0)(-4.0,0.0)
+\thicklines
+\put(4.0,4.0){\circle{0.35}}
+\thinlines
+\put(4.000,4.200){\line( 0, 1){2.8}}
+\put(4.100,4.173){\line( 3, 5){1.4}}
+\put(4.173,4.100){\line( 5, 3){2.4}}
+\put(4.200,4.000){\line( 1, 0){2.8}}
+\put(4.173,3.900){\line( 5,-3){2.4}}
+\put(3.858,3.858){\line(-1,-1){2.0}}
+\put(3.800,4.000){\line(-1, 0){2.8}}
+\put(3.858,4.141){\line(-1, 1){2.0}}
+\put(3.900,7.500){0$^\circ$}
+\put(5.750,7.031){33$^\circ$}
+\put(7.031,5.750){61$^\circ$}
+\put(7.500,3.900){90$^\circ$}
+\put(7.031,2.050){120$^\circ$}
+\put(1.325,1.325){225$^\circ$}
+\put(0.100,3.900){270$^\circ$}
+\put(1.325,6.475){315$^\circ$}
+\end{picture}
+\end{minipage}
+\caption[Layout of the Montoir LNG Fires]{Layout of the Montoir LNG Fires.}
+\label{Montoir_Layout}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_0} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_33} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_61} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_90} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_120} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_225} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_270} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir01_HF_315}
+\end{tabular*}
+\caption[Montoir LNG Fires, far-field radiometers, Test~1]{Montoir LNG Fires, far-field radiometers, Test~1.}
+\label{Montoir_HF_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_0} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_33} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_61} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_90} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_120} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_225} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_270} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir02_HF_315}
+\end{tabular*}
+\caption[Montoir LNG Fires, far-field radiometers, Test~2]{Montoir LNG Fires, far-field radiometers, Test~2.}
+\label{Montoir_HF_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_0} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_33} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_61} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_90} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_120} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_225} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_270} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Montoir_LNG_Fires/Montoir03_HF_315}
+\end{tabular*}
+\caption[Montoir LNG Fires, far-field radiometers, Test~3]{Montoir LNG Fires, far-field radiometers, Test~3.}
+\label{Montoir_HF_3}
+\end{figure}
+
+
+
+\clearpage
+
+\subsection{NIST Douglas Firs}
+\label{Douglas_Firs_Heat_Flux}
+
+A description of the experiments and modeling assumptions are given in Sec.~\ref{NIST_Douglas_Firs_Description}. Heat flux gauges were positioned on two vertical arrays, a distance of 2~m and 3~m from the burning trees. Average experimental values for test condition are shown below.
+
+\begin{figure}[h]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_2_m_14_pc_HF_x_2_m.pdf} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_2_m_14_pc_HF_x_3_m.pdf} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_2_m_49_pc_HF_x_2_m.pdf} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_2_m_49_pc_HF_x_3_m.pdf} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_5_m_26_pc_HF_x_2_m.pdf} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Douglas_Firs/tree_5_m_26_pc_HF_x_3_m.pdf}
+\end{tabular*}
+\caption[NIST Douglas Firs, heat flux]{NIST Douglas Firs, heat flux at a distance of $x=2$~m and $x=3$~m}
+\label{NIST_Douglas_Firs_HF}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NIST/NRC Experiments}
+
+Cables of various types (power and control), and configurations (horizontal, vertical, in trays or free-hanging), were installed in the test compartment. For each of the four cable targets considered, measurements of the radiative and total heat flux were made with gauges positioned near the cables themselves.  The following pages display comparisons of these heat flux predictions and measurements for Control Cable B, Horizontal Cable Tray D, Power Cable F and Vertical Cable Tray G.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Cable_B_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Cable_B_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Cable_B_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_13_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_16_Cable_B_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable B, Tests 1, 2, 4, 7, 8, 10, 13, 16]
+{NIST/NRC experiments, heat flux to Cable B, Tests 1, 2, 4, 7, 8, 10, 13, 16.}
+\label{NIST_NRC_Cable_B_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Cable_B_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Cable_B_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Cable_B_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Cable_B_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable B, Tests 3, 5, 9, 14, 15, 18]
+{NIST/NRC experiments, heat flux to Cable B, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_Cable_B_Flux_Open}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Cable_D_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Cable_D_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Cable_D_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Cable_D_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Cable_D_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Cable_D_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_13_Cable_D_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_16_Cable_D_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable D, Tests 1, 2, 4, 7, 8, 10, 13, 16]
+{NIST/NRC experiments, heat flux to Cable D, Tests 1, 2, 4, 7, 8, 10, 13, 16.}
+\label{NIST_NRC_Cable_D_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+                           &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Cable_D_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Cable_D_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Cable_D_Flux} \\
+                      &
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable D, Tests 5, 9, 14]
+{NIST/NRC experiments, heat flux to Cable D, Tests 5, 9, 14.}
+\label{NIST_NRC_Cable_D_Flux_Open}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Cable_F_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Cable_F_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Cable_F_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_13_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_16_Cable_F_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable F, Tests 1, 2, 4, 7, 8, 10, 13, 16]
+{NIST/NRC experiments, heat flux to Cable F, Tests 1, 2, 4, 7, 8, 10, 13, 16.}
+\label{NIST_NRC_Cable_F_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Cable_F_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Cable_F_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Cable_F_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Cable_F_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable F, Tests 3, 5, 9, 14, 15, 18]
+{NIST/NRC experiments, heat flux to Cable F, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_Cable_F_Flux_Open}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_01_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_07_Cable_G_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_02_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_08_Cable_G_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_04_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_10_Cable_G_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_13_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_16_Cable_G_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable G, Tests 1, 2, 4, 7, 8, 10, 13, 16]
+{NIST/NRC experiments, heat flux to Cable G, Tests 1, 2, 4, 7, 8, 10, 13, 16.}
+\label{NIST_NRC_Cable_G_Flux_Closed}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_03_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_09_Cable_G_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_05_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_14_Cable_G_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_15_Cable_G_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_NRC/NIST_NRC_18_Cable_G_Flux}
+\end{tabular*}
+\caption[NIST/NRC experiments, heat flux to Cable G, Tests 3, 5, 9, 14, 15, 18]
+{NIST/NRC experiments, heat flux to Cable G, Tests 3, 5, 9, 14, 15, 18.}
+\label{NIST_NRC_Cable_G_Flux_Open}
+\end{figure}
+
+
+\clearpage
+
+\subsection{NIST Pool Fires}
+\label{NIST_Pool_Fires_Heat_Flux_Results}
+
+A description of the NIST Pool Fire experiments and modeling is given in Sec.~\ref{NIST_Pool_Fires_Description}. On the following pages are comparisons of heat flux measurements and predictions at various locations and orientations.
+\begin{itemize}
+\item Figure~\ref{NIST_Pool_Fire_Heat_Flux} displays downward radiative and total heat flux near the liquid pool surface of a 30~cm methanol fire. The {\rm radiative} heat flux measurements were made by Hamins~et~al.~\cite{Hamins:CST1994} and the {\em total} heat flux measurements were made by Kim et al.~\cite{Kim:FSJ2019}.
+\item Figure~\ref{NIST_Pool_Fire_Heat_Flux2} displays radial and vertical profiles of {\em total} heat flux for a 30~cm methanol fire extending beyond the outer rim of the pan~\cite{Kim:FSJ2019}. The vertical profile was made at $r=60$~cm. Additional radial measurements were made by Klassen~et~al.~\cite{Klassen:GCR1994}.
+\item Figure~\ref{NIST_Pool_Fire_Heat_Flux3} displays a radial profile of the total heat flux in the downward direction for a 100~cm pan methanol fire. The radial distance ranges from the burner edge ($r=50$~cm) to $r=200$~cm. The positions of the heat flux gauges were located $z=1$~cm above the fuel surface and oriented in the upward direction~\cite{Sung:TN2019}.
+\item Figure~\ref{NIST_Pool_Fire_Heat_Flux4} displays radial profiles of the total heat flux emitted radially away from the fire at heights of $z=41$~cm, $z=61$~cm, and $z=81$~cm above the fuel surface. The heat flux gauges were oriented in the horizontal direction toward the fire centerline~\cite{Sung:TN2019}.
+\end{itemize}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/Methanol_30_cm_radHF_radial} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/Methanol_30_cm_HF_radial1}
+\end{tabular*}
+\caption[NIST Pool Fires, 30 cm methanol, radial profiles heat flux near surface]
+{NIST Pool Fires, 30 cm methanol fire, radial profiles of downward radiative and total heat flux, respectively, at $z=0.7$~cm (left) and $z=1.3$~cm (right).}
+\label{NIST_Pool_Fire_Heat_Flux}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/Methanol_30_cm_HF_radial2} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/Methanol_30_cm_HF_vertical}
+\end{tabular*}
+\caption[NIST Pool Fires, 30 cm methanol, radial and vertical profiles of total heat flux]
+{NIST Pool Fires, 30 cm methanol fire, radial and vertical profiles of total heat flux from a 30~cm methanol fire.}
+\label{NIST_Pool_Fire_Heat_Flux2}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/NIST_Methanol_1m_pan_HF_radial_0_cm} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/NIST_Methanol_1m_pan_HF_vertical_207_cm}
+\end{tabular*}
+\caption[NIST Pool Fires, 100 cm methanol, radial and vertical profiles of heat flux]
+{NIST Pool Fires, 100 cm methanol fire, total heat flux downward at $z=0$~cm (left) and outward at $r=207$~cm (right).}
+\label{NIST_Pool_Fire_Heat_Flux3}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/NIST_Methanol_1m_pan_HF_radial_41_cm} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/NIST_Methanol_1m_pan_HF_radial_61_cm} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Pool_Fires/NIST_Methanol_1m_pan_HF_radial_81_cm}}
+\end{tabular*}
+\caption[NIST Pool Fires, 100 cm methanol, radial profiles of heat flux]
+{NIST Pool Fires, 100 cm methanol fire, total heat flux outward at $z=41$~cm, $z=61$~cm, and $z=61$~cm.}
+\label{NIST_Pool_Fire_Heat_Flux4}
+\end{figure}
+
+\clearpage
+
+\subsection{NIST Structure Separation Verification}
+\label{NIST_SSE_Verification_Heat_Flux_Results}
+
+The NIST Structure Separation Verification experiments are described in Sec.~\ref{NIST_Structure_Separation_Description}.  Below in Figs.~\ref{NIST_SSE_Verification_HF_4MW} and \ref{NIST_SSE_Verification_HF_8MW} we plot FDS results for two grid resolutions against the time series of the gauge heat flux data from the verification tests using the NFRL 8 MW calibration burner with natural gas fuel.
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF3} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF4} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF5} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_4MW_HF6}
+\end{tabular*}
+\caption[NIST Structure Separation Verification heat flux (4 MW)]
+{NIST Structure Separation Verification heat flux (4 MW max heat release rate).  Gauges HF1, HF3, and HF5 are position at burner level (1 m off the floor) and, respectively, 2 m, 3 m, and 4 m away from the burner center.  Gauges HF2, HF4, and HF6 are positioned 2 m above burner level (3 m off the floor) and likewise 2 m, 3 m, and 4 m away from the burner center.}
+\label{NIST_SSE_Verification_HF_4MW}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF1} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF2} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF3} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF4} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF5} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/NIST_Structure_Separation/SSE_Verification_8MWb_HF6}
+\end{tabular*}
+\caption[NIST Structure Separation Verification heat flux (8 MW)]
+{NIST Structure Separation Verification heat flux (8 MW max heat release rate).  Gauges HF1, HF3, and HF5 are position at burner level (1 m off the floor) and, respectively, 2 m, 3 m, and 4 m away from the burner center.  Gauges HF2, HF4, and HF6 are positioned 2 m above burner level (3 m off the floor) and likewise 2 m, 3 m, and 4 m away from the burner center.}
+\label{NIST_SSE_Verification_HF_8MW}
+\end{figure}
+
+\clearpage
+
+\subsection{Phoenix LNG Fires}
+\label{Phoenix_LNG_Fires_Heat_Flux}
+
+A description of the two LNG pool fire experiments is given in Sec.~\ref{Phoenix_LNG_Fires_Description}.
+
+The general layout of the facility is shown in Fig.~\ref{Phoenix_Layout}. Wide-angle and narrow-angle radiometers were positioned at various heights off the ground and at various inclination angles along the axes shown in the figure.
+
+Figure~\ref{Phoenix_Heat_Flux} compares predicted and measured heat fluxes for the wide-angle radiometers as a function of distance from the LNG pool fires. These radiometers were positioned along all four directional axes. Figure~\ref{Phoenix_Narrow_Angle_Heat_Flux} compares predicted and measured heat flux for the narrow-angle radiometers along the north and south axes. There were three measurement towers along each axis. The nearest tower contained five narrow-angle radiometers at various inclination angles. The further two towers contained one narrow-angle radiometer each, along with one wide-angle radiometer. The vertical axes of the plots in Fig.~\ref{Phoenix_Heat_Flux} represent the ``spot height'' of the radiometers; that is, the height of the fire plume at which the radiometers were aimed. The ``spot diameter'' of the various radiometers ranged from 5~m to 15~m.
+
+
+\begin{figure}[!ht]
+\begin{minipage}{16cm}
+\setlength{\unitlength}{1.0cm}
+\begin{picture}(8.0,8.0)(-4.0,0.0)
+\thicklines
+\put(4.0,4.0){\circle{1.2}}
+\thinlines
+\put(4.0,4.0){\circle{0.83}}
+\put(4.0,4.0){\circle{0.21}}
+\put(3.56,4.42){\line(-1,1){0.5}}
+\put(2.56,5.0){Pool}
+\put(4.29,4.29){\line(1,1){0.6}}
+\put(4.4,5.0){Test 2}
+\put(4.07,3.93){\line(1,-1){0.8}}
+\put(4.4,2.83){Test 1}
+\put(4.0,4.0){\circle*{0.05}}
+\put(4.0,4.0){\vector(-1,0){4.0}}
+\put(0.4,3.5){West Radiometers}
+\put(4.0,4.0){\vector(1,0){4.0}}
+\put(5.0,3.5){East Radiometers}
+\put(4.0,4.0){\vector(0,1){4.0}}
+\put(4.5,7.0){North Radiometers}
+\put(4.0,4.0){\vector(0,-1){4.0}}
+\put(4.5,1.0){South Radiometers}
+\end{picture}
+\end{minipage}
+\caption[Layout of the Phoenix LNG Fires]{Layout of the Phoenix LNG Fires.}
+\label{Phoenix_Layout}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Phoenix_LNG_Fires/Phoenix01_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Phoenix_LNG_Fires/Phoenix02_Heat_Flux_Profile}
+\end{tabular*}
+\caption[Phoenix LNG Fires, radial profiles of wide-angle heat flux]{Phoenix LNG Fires, radial profiles of wide-angle heat flux.}
+\label{Phoenix_Heat_Flux}
+\end{figure}
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Phoenix_LNG_Fires/Phoenix01_Narrow_Angle_Heat_Flux_Profile} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Phoenix_LNG_Fires/Phoenix02_Narrow_Angle_Heat_Flux_Profile}
+\end{tabular*}
+\caption[Phoenix LNG Fires, vertical profiles of narrow-angle heat flux]{Phoenix LNG Fires, vertical profiles of narrow-angle heat flux.}
+\label{Phoenix_Narrow_Angle_Heat_Flux}
+\end{figure}
+
+\clearpage
+
+\subsection{Sandia Methane Burner Experiments}
+\label{Sandia_Methane_Burner_Heat_Flux}
+
+A brief summary of these experiments and the modeling strategy is found in Sec.~\ref{Sandia_Methane_Burner_Description}.
+
+On the following pages are comparisons of vertical profiles of the measured and predicted heat flux approximately 9~m from the centerline of a 3~m diameter methane burner of various heat release rates. There were two types of gauges used in the experiments---a conventional wide-angle heat flux gauge and a narrow-angle radiometer designed to measure the surface emissive power (SEP) of the fire. The narrow-angle radiometer had a view angle of 5$^\circ$ which was focused on a circular patch of flame of diameter approximately 0.8~m. This narrow-angle heat flux is modeled in FDS as the radiance (kW/m$^2$/sr) of a single ray multiplied by $\pi$~sr. The unit sphere is discretized into approximately 600~solid angles, and the angle closest to the radiometer direction vector is used.
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner01_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner01_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner02_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner02_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner03_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner03_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner04_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner04_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 1-4] {Sandia Methane Burner, heat flux, Tests 1-4.}
+\label{Sandia_Methane_Burner_HF_1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner05_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner05_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner06_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner06_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner07_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner07_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner08_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner08_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 5-8] {Sandia Methane Burner, heat flux, Tests 5-8.}
+\label{Sandia_Methane_Burner_HF_2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner09_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner09_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner10_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner10_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner11_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner11_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner12_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner12_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 9-12] {Sandia Methane Burner, heat flux, Tests 9-12.}
+\label{Sandia_Methane_Burner_HF_3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner13_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner13_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner14_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner14_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner15_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner15_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner16_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner16_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 13-16] {Sandia Methane Burner, heat flux, Tests 13-16.}
+\label{Sandia_Methane_Burner_HF_4}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner17_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner17_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner18_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner18_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner19_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner19_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner20_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner20_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 17-20] {Sandia Methane Burner, heat flux, Tests 17-20.}
+\label{Sandia_Methane_Burner_HF_5}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner21_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner21_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner22_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner22_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner23_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner23_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner24_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner24_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 21-24] {Sandia Methane Burner, heat flux, Tests 21-24.}
+\label{Sandia_Methane_Burner_HF_6}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner25_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner25_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner26_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner26_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner27_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner27_HF_narrow} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner28_HF_wide} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Sandia_Methane_Burner/Burner28_HF_narrow}
+\end{tabular*}
+\caption[Sandia Methane Burner, heat flux, Tests 25-28] {Sandia Methane Burner, heat flux, Tests 25-28.}
+\label{Sandia_Methane_Burner_HF_7}
+\end{figure}
+
+\clearpage
+
+\subsection{Shell LNG Fireballs}
+\label{Shell_LNG_Fireballs_Heat_Flux}
+
+A brief description of the experiments and modeling assumptions is given in Sec.~\ref{Shell_LNG_Fireballs_Description}.
+
+Figure~\ref{Shell_HF} compares the measured and predicted heat flux from three large fireballs at a distance of 100~m from the test vessel. Experiment~4 also includes measurements at distances of 40~m and 70~m.
+
+\begin{figure}[!ht]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Shell_LNG_Fireballs/Exp_2_HF} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Shell_LNG_Fireballs/Exp_3_HF} \\
+\multicolumn{2}{c}{\includegraphics[height=2.15in]{SCRIPT_FIGURES/Shell_LNG_Fireballs/Exp_4_HF}}
+\end{tabular*}
+\caption[Shell LNG Fireballs, heat flux] {Heat flux for the Shell LNG Fireball experiments.}
+\label{Shell_HF}
+\end{figure}
+
+\clearpage
+
+\subsection{UMD SBI Experiment}
+
+A description of this experiment can be found in Sec.~\ref{UMD_SBI_Description}.
+
+Figure~\ref{UMD_SBI_Rad} displays measured and predicted radiative heat flux to a vertical array of gauges (10~cm, 35~cm, 60~cm, 85~cm, 110~cm, 135~cm above the burner). The array is at a distance of 1~m from a PMMA corner fire in the SBI (Single Burning Item) apparatus.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=10} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=35} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=60} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=85} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=110} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_SBI/Rad_z=135}
+\end{tabular*}
+\caption[UMD SBI, radiative heat flux at six vertical locations]
+{UMD SBI, radiative heat flux at six vertical locations.}
+\label{UMD_SBI_Rad}
+\end{figure}
+
+\clearpage
+
+\subsection{UMD Line Burner}
+
+In the UMD line burner experiments, radiative heat flux was measured at a distance of 1~m normal to the flame sheet.  In the FDS calculations the domain is extended to encompass the heat flux measurement location; two devices are placed at the 1~m distance on either side of the flame as shown in Fig.~\ref{fig_umd_integrated_intensity}. This figure also shows a slice contour of integrated radiation intensity to confirm the pattern is smooth.
+
+The radiative fraction and radiative heat flux as functions of oxygen volume fraction in the coflow have been measured by White~et~al.~\cite{White:2015}.  FDS does not employ a specified radiative fraction in these simulations. Rather it uses a three step reaction mechanism that produces CO and soot in the first step and the oxidation of these species in the second and third. The source of thermal radiation is the CO, CO$_2$, water vapor, and soot in the flame, as calculated by RadCal. Figure~\ref{fig_umd_chi_r} displays the measured and predicted global radiative fraction and heat flux.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[height=3in]{FIGURES/UMD_Line_Burner/integrated_intensity}
+\caption[UMD Line Burner contour of integrated radiation intensity]{UMD Line Burner contour of integrated radiation intensity.}
+\label{fig_umd_integrated_intensity}
+\end{figure}
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_Line_Burner/methane_Chi_r} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_Line_Burner/methane_rad_heat_flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_Line_Burner/propane_Chi_r} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/UMD_Line_Burner/propane_rad_heat_flux}
+\end{tabular*}
+\caption[UMD Line Burner radiative fraction and radiative heat flux]{The plots on the left compare measured and predicted radiative fraction, and the plots on the right compare measured and predicted heat flux to a target 1~m away from the flame.}
+\label{fig_umd_chi_r}
+\end{figure}
+
+
+\clearpage
+
+\subsection{WTC Experiments}
+
+There were a variety of heat flux gauges installed in the test compartment. Most were within 2~m of the fire. Their locations and orientations are listed in Table~\ref{WTC_Gauges}.
+
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Station_2_Flux_High} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Station_2_Flux_High} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Station_2_Flux_High} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Station_2_Flux_High} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Station_2_Flux_High} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Station_2_Flux_High}
+\end{tabular*}
+\caption[WTC experiments, heat flux at Station 2, high position]
+{WTC experiments, heat flux at Station 2, high position.}
+\label{NIST_WTC_Station_2_Flux_High}
+\end{figure}
+
+\newpage
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Station_2_Flux_Low} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Station_2_Flux_Low} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Station_2_Flux_Low} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Station_2_Flux_Low} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Station_2_Flux_Low} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Station_2_Flux_Low}
+\end{tabular*}
+\caption[WTC experiments, heat flux at Station 2, low position]
+{WTC experiments, heat flux at Station 2, low position.}
+\label{NIST_WTC_Station_2_Flux_Low}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Upper_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Upper_Column_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Upper_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Upper_Column_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Upper_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Upper_Column_Flux}
+\end{tabular*}
+\caption[WTC experiments, heat flux to upper column]
+{WTC experiments, heat flux to upper column.}
+\label{NIST_WTC_Upper_Column_Flux}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_01_Lower_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_02_Lower_Column_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_03_Lower_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_04_Lower_Column_Flux} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_05_Lower_Column_Flux} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/WTC/WTC_06_Lower_Column_Flux}
+\end{tabular*}
+\caption[WTC experiments, heat flux to lower column]
+{WTC experiments, heat flux to lower column.}
+\label{NIST_WTC_Lower_Column_Flux}
+\end{figure}
+
+\clearpage
+
+
+\subsection{Summary of Target Heat Flux Predictions}
+\label{Target Heat Flux}
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Target_Heat_Flux}
+\end{tabular}
+\end{center}
+\caption[Summary of target heat flux predictions]
+{Summary of target heat flux predictions.}
+\end{figure}
+
+
+
+
+\clearpage
+
+\section{Attenuation of Thermal Radiation in Water Spray}
+
+This section presents the results of simulations of spray experiments where the reduction of thermal radiation by a fine water spray was measured.
+
+\subsection{BRE Spray Experiments}
+
+Attenuation of thermal radiation by a water spray was measured using three full-cone type hydraulic nozzles at eight different pressures. The initial droplet speeds were determined using a simple hydraulic relation, $v = 0.9 \sqrt{2P/\rho}$. The median drop size distributions were determined by assuming $d_m \propto p^{-1/3}$ and finding the constant of proportionality by fitting to the experimental PDPA measurement 1~m below the nozzles.  Measured median diameters, $d_{v50}$, are compared against mean diameters, $d_{43}$. The arithmetic mean of the droplets is used for vertical velocity. The comparison of predicted and measured attenuation, Fig.~\ref{BRE_LEMTA_Spray_Attenuation}, is made at a distance of 4~m from the heat source.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[width=2.8in]{SCRIPT_FIGURES/BRE_LEMTA_Spray/BRE_Spray_W} &
+\includegraphics[width=2.8in]{SCRIPT_FIGURES/BRE_LEMTA_Spray/BRE_Spray_Diameter}
+\end{tabular*}
+\caption[Droplet speeds and mean diameters for the three nozzles]{Comparison of experimental and predicted droplet speeds and mean diameters for the three nozzles and different pressures.}
+\label{BRE_Spray_W_and_diam}
+\end{figure}
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4in]{SCRIPT_FIGURES/BRE_LEMTA_Spray/BRE_LEMTA_Spray_Attenuation}
+\end{tabular}
+\end{center}
+\caption[Comparison of radiation attenuation, BRE and LEMTA Spray experiments]{Comparison of predicted and measured radiation attenuation in the spray experiments at BRE and at LEMTA.}
+\label{BRE_LEMTA_Spray_Attenuation}
+\end{figure}
+
+
+\subsection{LEMTA Spray Experiments}
+
+The attenuation of thermal radiation was measured at five heights in water sprays produced by seven full-elliptic type hydraulic nozzles. The operating pressure was 4~bar. The initial speed was deduced from the water flow rate and the orifice diameter. The droplet size at the injection point was determined by comparing the predicted and measured results at the PDPA measurement location 0.2~m below the nozzles. The comparison of predicted and measured attenuation, Fig.~\ref{BRE_LEMTA_Spray_Attenuation}, is made at five locations.
+
+
+\clearpage
+
+\section{Water Spray Cooling}
+
+\subsection{LEMTA Spray Cooling Experiments}
+
+The results of the LEMTA Spray Cooling experiment is shown in Fig.~\ref{LEMTA_Spray_Cooling_Fig} for three different nozzles and two plate orientations, horizontal and vertical.
+
+\begin{figure}[h!]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_PSD3_Horizontal} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_PSD3_Vertical} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_SU42_Horizontal} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_SU42_Vertical} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_TPU_Horizontal} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/LEMTA_Spray/LEMTA_Spray_Cooling_TPU_Vertical}
+\end{tabular*}
+\caption[LEMTA Spray Cooling steel plate temperatures]{Temperature of the top and bottom of a heated steel plate cooled with a water spray.}
+\label{LEMTA_Spray_Cooling_Fig}
+\end{figure}
+
+
+\clearpage
+
+\section{Convective Heat Flux}
+
+This section focuses specifically on experiments that primarily involved convective heat transfer.
+
+\subsection{Bouchair Solar Chimney}
+
+The plots on the following pages compare the predicted air mass flow rates through the test apparatus shown in Fig.~\ref{Bouchair_Drawing}. The measurements were made at both the inlet and outlet of the thermal cavity. Note that in Bouchair's thesis~\cite{Bouchair:Thesis}, the measurements were presented as mass flow rates per unit length of the inlet slot, 1.4~m. In the plots on the following pages, the measurements and simulation results are presented simply as a total mass flux, kg/s.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p1_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p1_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p1_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p1_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p1_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p1_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p1_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p1_60}
+\end{tabular*}
+\caption[Bouchair Solar Chimney, 0.1 m thermal cavity]{Bouchair Solar Chimney, 0.1 m thermal cavity.}
+\label{Bouchair_p1}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p2_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p2_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p2_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p2_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p2_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p2_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p2_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p2_60}
+\end{tabular*}
+\caption[Bouchair Solar Chimney, 0.2 m thermal cavity]{Bouchair Solar Chimney, 0.2 m thermal cavity.}
+\label{Bouchair_p2}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p3_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p3_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p3_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p3_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p3_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p3_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p3_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p3_60}
+\end{tabular*}
+\caption[Bouchair Solar Chimney, 0.3 m thermal cavity]{Bouchair Solar Chimney, 0.3 m thermal cavity.}
+\label{Bouchair_p3}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p5_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p5_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p5_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_p5_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p5_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p5_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p5_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_p5_60}
+\end{tabular*}
+\caption[Bouchair Solar Chimney, 0.5 m thermal cavity]{Bouchair Solar Chimney, 0.5 m thermal cavity.}
+\label{Bouchair_p5}
+\end{figure}
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_1p_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_1p_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_1p_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p1_1p_60} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_1p_30} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_1p_40} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_1p_50} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/Bouchair_Solar_Chimney/SC_p4_1p_60}
+\end{tabular*}
+\caption[Bouchair Solar Chimney, 1.0 m thermal cavity]{Bouchair Solar Chimney, 1.0 m thermal cavity.}
+\label{Bouchair_1p}
+\end{figure}
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Convective_Heat_Flux}
+\end{tabular}
+\end{center}
+\caption[Summary of Bouchair Solar Chimney results]{Summary of Bouchair Solar Chimney results.}
+\label{Mass Flow Rate}
+\end{figure}
+
+
+\clearpage
+
+\section{Radiation Source Term}
+
+\subsection{FM Burner Experiments}
+\label{FM_Burner_Heat_Flux_Distribution}
+
+Figure~\ref{FM_Burner_Vertical_Heat_Flux} displays mean and rms vertical profiles of the radiation emission, in units of kW/m, from a 15~kW, 13.7~cm (inner) diameter ethylene burner at ambient oxygen concentrations of 21~\%, 19~\%, 17~\%, and 15~\%. Figure~\ref{FM_Burner_Radiant_Fraction} displays the predicted total radiant fraction for the four ambient oxygen levels.
+
+\begin{figure}[p]
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Mean_Vertical_Radiation_Emission_20p9} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/RMS_Vertical_Radiation_Emission_20p9} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Mean_Vertical_Radiation_Emission_19p0} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/RMS_Vertical_Radiation_Emission_19p0} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Mean_Vertical_Radiation_Emission_16p8} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/RMS_Vertical_Radiation_Emission_16p8} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Mean_Vertical_Radiation_Emission_15p2} &
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/RMS_Vertical_Radiation_Emission_15p2}
+\end{tabular*}
+\caption[FM Burner experiments, mean and rms vertical heat flux profiles]
+{FM Burner experiments, mean and rms vertical heat flux profiles.}
+\label{FM_Burner_Vertical_Heat_Flux}
+\end{figure}
+
+\begin{figure}[p]
+\begin{center}
+\begin{tabular}{c}
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Radiant_Fraction_20p9} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Radiant_Fraction_19p0} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Radiant_Fraction_16p8} \\
+\includegraphics[height=2.15in]{SCRIPT_FIGURES/FM_Burner/Radiant_Fraction_15p2}
+\end{tabular}
+\end{center}
+\caption[FM Burner experiments, radiant fraction]
+{FM Burner experiments, radiant fraction for four oxygen levels.}
+\label{FM_Burner_Radiant_Fraction}
+\end{figure}
+
+
+
+\clearpage
+
+\section{Condensation Heat Flux}
+\label{Condensation}
+This section focuses on experiments involving condensation onto surfaces.
+
+\subsection{SETCOM Experiments}
+The following plot shows the results of modeling the SETCOM experiments.
+
+\begin{figure}[h!]
+        \begin{center}
+                \begin{tabular}{c}
+                        \includegraphics[height=4in]{SCRIPT_FIGURES/ScatterPlots/FDS_Condensation}
+                \end{tabular}
+        \end{center}
+        \caption[Summary of SETCOM results]{Summary of SETCOM results.}
+        \label{SETCOM_summary}
+\end{figure}
+

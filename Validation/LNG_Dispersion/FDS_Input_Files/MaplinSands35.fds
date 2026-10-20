@@ -1,0 +1,74 @@
+&HEAD CHID='MaplinSands35', TITLE='MaplinSands35 test simulation'/
+
+&MESH IJK=100,100,32, XB=-20,80,-50,50,0,32, MULT_ID='mesh' /
+&MULT ID='mesh', DX=100, DY=100, I_LOWER=-1, I_UPPER=6, J_LOWER=-1, J_UPPER=1 /
+
+&TRNZ IDERIV=1, CC=0, PC=0.25, MESH_NUMBER=0 /
+
+&TIME T_BEGIN=-200., T_END=400. /
+
+&MISC P_INF=101325, HUMIDITY=77. /
+
+&WIND L=-81.2, U_STAR=0.315, Z_0=0.00002, THETA_STAR=-0.088, RAMP_DIRECTION_T='theta', TMP_REF=16.1, Z_REF=2. /
+
+&RAMP ID='theta', T=   0., F=290. /
+&RAMP ID='theta', T=  40., F=270. /
+&RAMP ID='theta', T=  50., F=270. /
+&RAMP ID='theta', T=  60., F=275. /
+&RAMP ID='theta', T=  70., F=273. /
+&RAMP ID='theta', T=  80., F=270. /
+&RAMP ID='theta', T=  90., F=268. /
+&RAMP ID='theta', T= 100., F=265. /
+&RAMP ID='theta', T= 110., F=265. /
+&RAMP ID='theta', T= 120., F=265. /
+&RAMP ID='theta', T= 130., F=270. /
+&RAMP ID='theta', T= 140., F=272. /
+&RAMP ID='theta', T= 150., F=275. /
+    
+&RADI RADIATION=.FALSE. /
+
+&SPEC ID='METHANE' /
+
+&VENT XB=-7,7,-7,7,0,0, XYZ=0.,0.,0., RADIUS=7.19, SURF_ID='LNG_SOURCE' / 
+
+&VENT MB='ZMIN', SURF_ID='OCEAN' /
+&VENT MB='ZMAX', SURF_ID='OPEN' /
+&VENT PBY=-150,SURF_ID='PERIODIC FLOW ONLY' /
+&VENT PBY= 150,SURF_ID='PERIODIC FLOW ONLY' /
+&VENT PBX=-120,SURF_ID='PERIODIC FLOW ONLY' /
+&VENT PBX= 680,SURF_ID='PERIODIC FLOW ONLY' /
+
+&SURF ID ='OCEAN', COLOR='BLUE', ROUGHNESS=0.0006, CONVECTIVE_HEAT_FLUX=0.031 /
+
+&SURF ID='LNG_SOURCE', MASS_FLUX(1)=0.167, SPEC_ID(1)='METHANE', RAMP_MF(1)='LNG_ramp', TMP_FRONT=-161.55, RAMP_T='LNG_ramp'/ 
+  High Mass Flux (From FERC evaluation of DEGADIS according to Guide to LNG Database)
+
+&RAMP ID='LNG_ramp', T=  0., F=0.0/
+&RAMP ID='LNG_ramp', T=  6., F=1.0/
+&RAMP ID='LNG_ramp', T=135., F=1.0/
+&RAMP ID='LNG_ramp', T=141., F=0.0/
+
+&SLCF PBY=0, QUANTITY='TEMPERATURE', VECTOR=.TRUE. /
+&SLCF PBY=0, QUANTITY='VELOCITY' /
+&SLCF PBY=0, QUANTITY='VOLUME FRACTION', SPEC_ID='METHANE' /
+&SLCF PBZ=1, QUANTITY='VOLUME FRACTION', SPEC_ID='METHANE' /
+
+&DUMP DT_DEVC=3. /
+
+&DEVC ID      ='C1a00'        ,       XYZ=    127.0   ,       -22.4   ,       0.9     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C1a01'        ,       XYZ=    127.0   ,       -22.4   ,       1.8     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C1a02'        ,       XYZ=    127.0   ,       -22.4   ,       2.8     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+
+&DEVC ID      ='C2a00'        ,       XYZ=    246.2   ,       -43.5   ,       1.0     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C2a01'        ,       XYZ=    246.2   ,       -43.5   ,       1.6     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C2a02'        ,       XYZ=    246.2   ,       -43.5   ,       2.4     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+
+&DEVC ID      ='C3a00'        ,       XYZ=    397.8   ,       -41.8   ,       1.0     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C3a01'        ,       XYZ=    397.8   ,       -41.8   ,       1.9     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+&DEVC ID      ='C3a02'        ,       XYZ=    397.8   ,       -41.8   ,       2.4     ,       QUANTITY='VOLUME FRACTION'      ,        SPEC_ID='METHANE' /
+
+&DEVC ID='u', QUANTITY='VELOCITY',    POINTS=60, XB=300,300,125,125,0.2,31, Z_ID='z' /
+&DEVC ID='T', QUANTITY='TEMPERATURE', POINTS=60, XB=300,300,125,125,0.2,31, HIDE_COORDINATES=.TRUE. /
+
+&TAIL /
+

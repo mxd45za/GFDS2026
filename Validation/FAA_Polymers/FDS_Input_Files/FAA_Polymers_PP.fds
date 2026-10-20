@@ -1,0 +1,79 @@
+Solid phase heat conduction and reaction calculation of a 0.61 cm thick 
+slab of plastic pyrolyzing under a heat flux of 50 kW/m2. 
+The calculation is purely for the solid phase. There is no gas phase 
+coupling -- just a fixed external heat flux of 50 kW/m2.
+
+&HEAD CHID='FAA_Polymers_PP', TITLE='PP at 50 kW/m2, No Gas Phase Reaction' /
+
+&MESH IJK=3,3,4, XB=-0.15,0.15,-0.15,0.15,0.0,0.4 /  Mesh is just to make FDS run
+
+&TIME T_END=700., WALL_INCREMENT=1, DT=0.1 /  Force FDS to do solid phase calc every time step
+&MISC Y_O2_INFTY=0.01 /
+
+&REAC FUEL='METHANE'/  No gas phase reaction with 1% O2 concentration
+
+&MATL ID='PP'
+      ABSORPTION_COEFFICIENT=966
+      EMISSIVITY=0.959
+      DENSITY=910.
+      HEAT_OF_REACTION=80.
+      REFERENCE_TEMPERATURE=158.
+      PYROLYSIS_RANGE=10.
+      NU_MATL=1.
+      MATL_ID='Liq'
+      SPECIFIC_HEAT = 2.68
+      CONDUCTIVITY = 0.24/
+
+&MATL ID='Liq'
+      ABSORPTION_COEFFICIENT=966
+      A(1) = 1.60E23
+      E(1) = 352000.
+      EMISSIVITY=0.959
+      DENSITY=910.
+      NU_SPEC=1.
+      SPEC_ID='METHANE'
+      HEAT_OF_REACTION=1310.
+      SPECIFIC_HEAT = 2.68
+      CONDUCTIVITY = 0.24/
+
+&MATL ID='FOIL'
+      CONDUCTIVITY=250.
+      SPECIFIC_HEAT=0.91
+      DENSITY=2700.0
+      EMISSIVITY=0.12
+      ABSORPTION_COEFFICIENT=50000/
+
+&MATL ID='FOAMGLAS'
+      CONDUCTIVITY=.04
+      SPECIFIC_HEAT=0.84
+      DENSITY=120.0
+      EMISSIVITY=1
+      ABSORPTION_COEFFICIENT=50000/
+
+&SURF ID='PP SLAB'
+      COLOR='BLACK'
+      MATL_ID(1,1)='PP'
+      MATL_ID(2,1)='FOIL'
+      MATL_ID(3,1)='FOAMGLAS'
+      HEAT_TRANSFER_COEFFICIENT=0.
+      THICKNESS=0.0061,.0000343,0.0254
+      STRETCH_FACTOR=1.
+      EXTERNAL_FLUX=50 /  External Flux is ONLY for this simple demo exercise
+
+&VENT XB=-0.05,0.05,-0.05,0.05,0.0,0.0, SURF_ID = 'PP SLAB' /
+
+&VENT MB='XMIN', SURF_ID='OPEN' /
+&VENT MB='XMAX', SURF_ID='OPEN' /
+&VENT MB='YMIN', SURF_ID='OPEN' /
+&VENT MB='YMAX', SURF_ID='OPEN' /
+&VENT MB='ZMAX', SURF_ID='OPEN' /
+
+&DUMP DT_DEVC=5. /
+
+&DEVC XYZ=0.0,0.0,0.0, IOR=3, QUANTITY='WALL TEMPERATURE',     ID='temp' /
+&DEVC XYZ=0.0,0.0,0.0, IOR=3, QUANTITY='BURNING RATE',         ID='MLR' /
+&DEVC XYZ=0.0,0.0,0.0, IOR=3, QUANTITY='WALL THICKNESS',       ID='thick' /
+
+&TAIL / 
+
+

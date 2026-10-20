@@ -1,0 +1,15 @@
+&HEAD CHID='SP_Test_12', TITLE='SP small-scale pallets in a tunnel' /
+
+&CATF OTHER_FILES='props.fds' /
+
+&MISC TMPA=20. /
+
+&TIME T_END=720. /    
+
+&OBST XB=2.8,3.3,0.1,0.5,0.040,0.040 /
+
+&SURF ID='FAN', VEL=-0.9, COLOR='INVISIBLE' /
+
+&INIT PART_ID='PINE', XB=2.9,3.2,0.2,0.4,0.040,0.220, N_PARTICLES_PER_CELL=1, CELL_CENTERED=T, MASS_PER_VOLUME=165, DRY=T /
+
+&TAIL /

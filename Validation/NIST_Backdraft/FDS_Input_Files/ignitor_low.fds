@@ -1,0 +1,14 @@
+# Lower ignitor:
+&PROP ID='spark', SPARK=T/
+# 1 Spark device
+#&DEVC ID='LowIgnitor', XYZ=-1.05,0.0,0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+
+# 8 Spark devices:
+&DEVC ID='LowIgnitor', XYZ=-1.081, -0.031, 0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.0605,-0.031, 0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.081, -0.0105,0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.0605,-0.0105,0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.081,  0.0105,0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.0605, 0.0105,0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.081,  0.031, 0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /
+&DEVC ID='LowIgnitor', XYZ=-1.0605, 0.031, 0.30, QUANTITY='TIME', SETPOINT=0, PROP_ID='spark' /

@@ -1,0 +1,10 @@
+RENDERDIR
+ ../../Manuals/FDS_User_Guide/SCRIPT_FIGURES
+LOADFILE
+ cascade_1.prt5
+SETTIMEVAL
+ 20.
+SETVIEWPOINT
+ view 1
+RENDERONCE
+ cascade_image

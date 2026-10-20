@@ -1,0 +1,28 @@
+&HEAD CHID='simple_test_1000_72', TITLE='Simple demonstration case.' /
+
+! Global grid: 288 x 192 x 192 = 10616832 cells.
+! Base grid: 36 x 24 x 24, refined by a factor of 8 in X, Y and Z.
+! Cell widths (m): DX=0.0125, DY=0.0125, DZ=0.0125.
+! 72 equal meshes: 12 subdivisions in Y and 6 in Z.
+&MULT ID='mesh_array', DY=0.2, DZ=0.4, J_UPPER=11, K_UPPER=5 /
+&MESH IJK=288,16,32, XB=0.0,3.6,0.0,0.2,0.0,0.4, MULT_ID='mesh_array' /
+
+&TIME T_END=10.0 /
+
+&REAC FUEL='PROPANE', SOOT_YIELD=0.01 /
+
+&SURF ID='BURNER', HRRPUA=1000., COLOR='RED' /
+
+&OBST XB=0.0,0.4,1.0,1.4,0.0,0.2 /
+&VENT XB=0.0,0.4,1.0,1.4,0.2,0.2, SURF_ID='BURNER' /
+
+&VENT XB=3.6,3.6,0.8,1.6,0.0,2.0, SURF_ID='OPEN' /
+
+&BNDF QUANTITY='GAUGE HEAT FLUX' /
+
+&SLCF PBY=1.2, QUANTITY='TEMPERATURE', VECTOR=.TRUE. /
+
+&DUMP DT_SLCF=1., DT_BNDF=1., DT_SMOKE3D=1., DT_SL3D=1.,
+      DT_HRR=1., DT_DEVC=1., DT_MASS=1., DT_CTRL=1., DT_HVAC=1.,
+      DT_ISOF=1., DT_PART=1., DT_PROF=1., DT_FLUSH=1. /
+&TAIL /
