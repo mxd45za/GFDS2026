@@ -8,6 +8,7 @@ MODULE G_PRES
     USE G_CONS
     USE G_POIS
     USE G_FUNC
+    USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
     USE CUDAFOR
     CONTAINS
 
@@ -256,9 +257,10 @@ MODULE G_PRES
 
             TYPE(DIM3) :: BLKD , GRDD
             INTEGER , PARAMETER :: BS = 8
-            INTEGER :: ISTAT,IW,BLKD_1D,GRDD_1D,NOM,N
+            INTEGER :: ISTAT,IW,BLKD_1D,GRDD_1D,NOM,N,VENT_INDEX
             REAL(EB) :: TNOW,H0_PRESSURE
             REAL(EB), ALLOCATABLE, DIMENSION(:) :: WALL_DUNDT_H_TMP,WALL_WORK1_H_TMP
+            REAL(EB) :: TSI,TIME_RAMP_FACTOR
             REAL(EB), DEVICE, POINTER, CONTIGUOUS :: DX_OTHERD(:),DY_OTHERD(:),DZ_OTHERD(:)
 
             CALL POINT_TO_MESH(NM)
@@ -317,6 +319,24 @@ MODULE G_PRES
                 IF (GPU_DEBUG_H2D_D2H) WALL_WORK1 = 0._EB
             ENDIF
 
+            IF (ANY(VENTS%DYNAMIC_PRESSURE/=0._EB)) THEN
+                GM%WALL_P_EXTERNAL_H = 0._EB
+                DO IW=1,N_EXTERNAL_WALL_CELLS
+                    IF (WALL(IW)%BOUNDARY_TYPE/=OPEN_BOUNDARY) CYCLE
+                    VENT_INDEX = WALL(IW)%VENT_INDEX
+                    IF (VENT_INDEX<=0) CYCLE
+                    IF (ABS(BOUNDARY_PROP1(WALL(IW)%B1_INDEX)%T_IGN-T_BEGIN)<=TWO_EPSILON_EB .AND. &
+                        VENTS(VENT_INDEX)%PRESSURE_RAMP_INDEX>=1) THEN
+                        TSI = T
+                    ELSE
+                        TSI = T-T_BEGIN
+                    ENDIF
+                    TIME_RAMP_FACTOR = EVALUATE_RAMP(TSI,VENTS(VENT_INDEX)%PRESSURE_RAMP_INDEX)
+                    GM%WALL_P_EXTERNAL_H(IW) = TIME_RAMP_FACTOR*VENTS(VENT_INDEX)%DYNAMIC_PRESSURE
+                ENDDO
+                GM%WALL_P_EXTERNALD = GM%WALL_P_EXTERNAL_H
+            ENDIF
+
             GM%PRHSD = 0._EB
             IF (PREDICTOR) THEN
                 IF (GPU_DEBUG_H2D_D2H) THEN
@@ -352,10 +372,16 @@ MODULE G_PRES
                 RHOPD => GM%RHOSD
             ENDIF
 
+            IF (OPEN_WIND_BOUNDARY) THEN
+                GM%U_WINDD = U_WIND
+                GM%V_WINDD = V_WIND
+                GM%W_WINDD = W_WIND
+            ENDIF
             CALL COMPUTE_PRESSURE_BCS_GPU<<<GRDD_1D,BLKD_1D,0,GM%STRM>>>(GM%BXSD, GM%BXFD, GM%BYSD, GM%BYFD, GM%BZSD, GM%BZFD, GM%WALL_TOPO_AOS, &
-                GM%WALL_PRESSURE_BC_TYPE, GM%WALL_IIO, GM%WALL_JJO, GM%WALL_KKO, GM%WALL_DUNDTD, GM%WALL_WORK1D, GM%WALL_P_EXTERNAL_OVER_RHOD, &
+                GM%WALL_PRESSURE_BC_TYPE, GM%WALL_IIO, GM%WALL_JJO, GM%WALL_KKO, GM%WALL_DUNDTD, GM%WALL_WORK1D, GM%WALL_P_EXTERNALD, GM%WALL_RHO_F, &
                 GM%FVXD, GM%FVYD, GM%FVZD, UUD, VVD, WWD, HPD, GM%KRESD, GM%HXD, GM%HYD, GM%HZD, GM%DXD, GM%DYD, GM%DZD, N_EXTERNAL_WALL_CELLS, IBAR, &
-                JBAR, KBAR, IBP1, JBP1, KBP1, H0_PRESSURE)
+                JBAR, KBAR, IBP1, JBP1, KBP1, H0_PRESSURE,DT,OPEN_WIND_BOUNDARY, &
+                GM%U_WINDD,GM%V_WINDD,GM%W_WINDD,GM%RDXND,GM%RDYND,GM%RDZND)
 
             DO NOM=1,NMESHES
                 IF (.NOT.ALLOCATED(GM%OMESH)) EXIT
@@ -1321,22 +1347,24 @@ MODULE G_PRES
         END SUBROUTINE ADD_FB_TO_F_XYZ
 
         ATTRIBUTES(GLOBAL) SUBROUTINE COMPUTE_PRESSURE_BCS_GPU(BXS_D, BXF_D, BYS_D, BYF_D, BZS_D, BZF_D, WALL_TOPO, &
-            WALL_PRESSURE_BC_TYPE, WALL_IIO, WALL_JJO, WALL_KKO, WALL_DUNDT, WALL_WORK1, WALL_P_EXTERNAL_OVER_RHO, FVX, &
+            WALL_PRESSURE_BC_TYPE, WALL_IIO, WALL_JJO, WALL_KKO, WALL_DUNDT, WALL_WORK1, WALL_P_EXTERNAL, WALL_RHO_F, FVX, &
             FVY, FVZ, UU, VV, WW, HP, KRES, HX, HY, HZ, DX, DY, DZ, N_EXTERNAL_WALL_CELLS, IBAR, JBAR, KBAR, IBP1, JBP1, &
-            KBP1, H0_PRESSURE)
+            KBP1, H0_PRESSURE,DT,WIND_BOUNDARY,U_WIND,V_WIND,W_WIND,RDXN,RDYN,RDZN)
             TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
 
             INTEGER, VALUE :: N_EXTERNAL_WALL_CELLS,IBAR,JBAR,KBAR,IBP1,JBP1,KBP1
-            REAL(EB), VALUE :: H0_PRESSURE
+            REAL(EB), VALUE :: H0_PRESSURE,DT
+            LOGICAL, VALUE :: WIND_BOUNDARY
+            REAL(EB), DEVICE, DIMENSION(0:*) :: U_WIND,V_WIND,W_WIND,RDXN,RDYN,RDZN
             REAL(EB), DEVICE, DIMENSION(1:MERGE(JBP1,1,JBAR>1),1:*) :: BXS_D,BXF_D
             REAL(EB), DEVICE, DIMENSION(1:IBP1,1:*) :: BYS_D,BYF_D,BZS_D,BZF_D
             REAL(EB), DEVICE, DIMENSION(0:IBP1,0:JBP1,0:*) :: FVX,FVY,FVZ,UU,VV,WW,HP,KRES
-            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_DUNDT,WALL_WORK1,WALL_P_EXTERNAL_OVER_RHO,HX,HY,HZ,DX,DY,DZ
+            REAL(EB), DEVICE, DIMENSION(0:*) :: WALL_DUNDT,WALL_WORK1,WALL_P_EXTERNAL,WALL_RHO_F,HX,HY,HZ,DX,DY,DZ
             INTEGER, DEVICE, DIMENSION(0:*) :: WALL_PRESSURE_BC_TYPE
             INTEGER, DEVICE, DIMENSION(1:*) :: WALL_IIO,WALL_JJO,WALL_KKO
 
             INTEGER :: IW,I,J,K,IOR,BTYPE,PBC,IIO,JJO,KKO
-            REAL(EB) :: P_EXTERNAL_OVER_RHO,DX_OTHER,DY_OTHER,DZ_OTHER
+            REAL(EB) :: P_EXTERNAL_OVER_RHO,DX_OTHER,DY_OTHER,DZ_OTHER,H0
 
             IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
             IF (IW < 1 .OR. IW > N_EXTERNAL_WALL_CELLS) RETURN
@@ -1365,43 +1393,54 @@ MODULE G_PRES
             IF (BTYPE == INTERPOLATED_BOUNDARY) RETURN
 
             IF (BTYPE == OPEN_BOUNDARY) THEN
-                P_EXTERNAL_OVER_RHO = WALL_P_EXTERNAL_OVER_RHO(IW)
+                P_EXTERNAL_OVER_RHO = WALL_P_EXTERNAL(IW)/WALL_RHO_F(IW)
+                H0 = H0_PRESSURE
+                IF (WIND_BOUNDARY) THEN
+                    SELECT CASE(IOR)
+                        CASE( 1); H0 = HP(1,J,K)    + 0.5_EB/(DT*RDXN(0))   *(U_WIND(K)-UU(0,J,K))
+                        CASE(-1); H0 = HP(IBAR,J,K) - 0.5_EB/(DT*RDXN(IBAR))*(U_WIND(K)-UU(IBAR,J,K))
+                        CASE( 2); H0 = HP(I,1,K)    + 0.5_EB/(DT*RDYN(0))   *(V_WIND(K)-VV(I,0,K))
+                        CASE(-2); H0 = HP(I,JBAR,K) - 0.5_EB/(DT*RDYN(JBAR))*(V_WIND(K)-VV(I,JBAR,K))
+                        CASE( 3); H0 = HP(I,J,1)    + 0.5_EB/(DT*RDZN(0))   *(W_WIND(K)-WW(I,J,0))
+                        CASE(-3); H0 = HP(I,J,KBAR) - 0.5_EB/(DT*RDZN(KBAR))*(W_WIND(K)-WW(I,J,KBAR))
+                    END SELECT
+                ENDIF
                 SELECT CASE(IOR)
                     CASE( 1)
                         IF (UU(0,J,K)<0._EB) THEN
                             BXS_D(J,K) = P_EXTERNAL_OVER_RHO + KRES(1,J,K)
                         ELSE
-                            BXS_D(J,K) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BXS_D(J,K) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                     CASE(-1)
                         IF (UU(IBAR,J,K)>0._EB) THEN
                             BXF_D(J,K) = P_EXTERNAL_OVER_RHO + KRES(IBAR,J,K)
                         ELSE
-                            BXF_D(J,K) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BXF_D(J,K) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                     CASE( 2)
                         IF (VV(I,0,K)<0._EB) THEN
                             BYS_D(I,K) = P_EXTERNAL_OVER_RHO + KRES(I,1,K)
                         ELSE
-                            BYS_D(I,K) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BYS_D(I,K) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                     CASE(-2)
                         IF (VV(I,JBAR,K)>0._EB) THEN
                             BYF_D(I,K) = P_EXTERNAL_OVER_RHO + KRES(I,JBAR,K)
                         ELSE
-                            BYF_D(I,K) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BYF_D(I,K) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                     CASE( 3)
                         IF (WW(I,J,0)<0._EB) THEN
                             BZS_D(I,J) = P_EXTERNAL_OVER_RHO + KRES(I,J,1)
                         ELSE
-                            BZS_D(I,J) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BZS_D(I,J) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                     CASE(-3)
                         IF (WW(I,J,KBAR)>0._EB) THEN
                             BZF_D(I,J) = P_EXTERNAL_OVER_RHO + KRES(I,J,KBAR)
                         ELSE
-                            BZF_D(I,J) = P_EXTERNAL_OVER_RHO + H0_PRESSURE
+                            BZF_D(I,J) = P_EXTERNAL_OVER_RHO + H0
                         ENDIF
                 END SELECT
                 RETURN
