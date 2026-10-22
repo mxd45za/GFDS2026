@@ -126,6 +126,11 @@ MODULE G_VELO
 
             CALL COMPUTE_MU_KRES<<<GRDD,BLKD,0,GM%STRM>>>(UP , VP , WP , UP_HAT,VP_HAT,WP_HAT,RHOP , GM%LES_FILTER_WIDTHD , GM%MU_DNSD , &
                                                 GM%MUD , UU,VV,WW ,GM%KRESD,IBAR,JBAR,KBAR,IBP1,JBP1,KBP1,C_DEARDORFF)
+
+            CALL COPY_GHOST_MU_KRES<<<(N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS+256-1)/256,256,0,GM%STRM>>> (GM%WALL_TOPO_AOS, &
+                    GM%CELL_INDEXD, GM%CELL_SOLID, GM%CELL_EXTERIOR, N_EXTERNAL_WALL_CELLS, N_INTERNAL_WALL_CELLS, &
+                    GM%MUD, GM%KRESD, NULL_BOUNDARY, SOLID_BOUNDARY, OPEN_BOUNDARY, MIRROR_BOUNDARY, &
+                    IBAR, JBAR, KBAR, IBP1, JBP1, KBP1, GM%CELL_WALL_INDEX,GM%CELL_LB,GM%CELL_UB,.FALSE.)
                           
             CALL ZERO_BOUNDARY_VISCOSITY_ACCUM_GPU<<<GRDD,BLKD,0,GM%STRM>>>( &
                 GM%IWORK1D,GM%WORK7D,IBP1,JBP1,KBP1)
@@ -138,7 +143,8 @@ MODULE G_VELO
 
             CALL COPY_GHOST_MU_KRES<<<(N_EXTERNAL_WALL_CELLS+N_INTERNAL_WALL_CELLS+256-1)/256,256,0,GM%STRM>>> (GM%WALL_TOPO_AOS, &
                     GM%CELL_INDEXD, GM%CELL_SOLID, GM%CELL_EXTERIOR, N_EXTERNAL_WALL_CELLS, N_INTERNAL_WALL_CELLS, &
-                    GM%MUD, GM%KRESD, NULL_BOUNDARY, SOLID_BOUNDARY, OPEN_BOUNDARY, MIRROR_BOUNDARY, IBAR, JBAR, KBAR, IBP1, JBP1, KBP1)
+                    GM%MUD, GM%KRESD, NULL_BOUNDARY, SOLID_BOUNDARY, OPEN_BOUNDARY, MIRROR_BOUNDARY, &
+                    IBAR, JBAR, KBAR, IBP1, JBP1, KBP1, GM%CELL_WALL_INDEX,GM%CELL_LB,GM%CELL_UB,.TRUE.)
 
             CALL COMPUTE_BOUNDARY_VISCOSITY_ADD_J<<<(JBP1+128)/128,128,0,GM%STRM>>>(IBAR,JBAR,KBAR,IBP1,JBP1,KBP1,GM%MUD,GM%KRESD)
             CALL COMPUTE_BOUNDARY_VISCOSITY_ADD_I<<<(IBP1+128)/128,128,0,GM%STRM>>>(IBAR,JBAR,KBAR,IBP1,JBP1,KBP1,GM%MUD,GM%KRESD)
@@ -256,7 +262,7 @@ MODULE G_VELO
 
             INTEGER :: IW, II, JJ, KK, IIG, JJG, KKG
 
-            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X - 1
+            IW = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
 
             IF (IW < 1 .OR. IW > N_EXTERNAL_WALL_CELLS) RETURN
 
@@ -581,7 +587,7 @@ MODULE G_VELO
             REAL(EB) :: DUDX , DVDX , DWDX , DUDY , DVDY , DWDY , DUDZ , DVDZ , DWDZ , DELTA , NU_EDDY
             REAL(EB) :: A_IJ(3,3) , S_IJ(3,3),O_IJ(3,3),S2,O2,IV_SO,SD2,DENOM
 
-            X = (blockIdx%x - 1) * blockDim%x + threadIdx%x - 1
+            X = (blockIdx%x - 1) * blockDim%x + threadIdx%x
 
             IF (X < 1 .OR. X > N_EXTERNAL_WALL_CELLS + N_INTERNAL_WALL_CELLS) RETURN
             IF (WALL_TOPO(X)%BOUNDARY_TYPE /= SOLID_BOUNDARY) RETURN
@@ -675,17 +681,21 @@ MODULE G_VELO
 
         ATTRIBUTES(GLOBAL) SUBROUTINE COPY_GHOST_MU_KRES(WALL_TOPO, CELL_INDEXD, CELL_SOLID, CELL_EXTERIOR, &
             N_EXTERNAL_WALL_CELLS, N_INTERNAL_WALL_CELLS, MUD, KRESD, NULL_BOUNDARY, SOLID_BOUNDARY, OPEN_BOUNDARY, &
-            MIRROR_BOUNDARY, IBAR, JBAR, KBAR, IBP1, JBP1, KBP1)
+            MIRROR_BOUNDARY, IBAR, JBAR, KBAR, IBP1, JBP1, KBP1, CELL_WALL_INDEX,CELL_LB,CELL_UB,SOLID_GHOSTS)
             TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
             INTEGER , VALUE :: N_EXTERNAL_WALL_CELLS,N_INTERNAL_WALL_CELLS,NULL_BOUNDARY,SOLID_BOUNDARY,OPEN_BOUNDARY,MIRROR_BOUNDARY
+            LOGICAL, VALUE :: SOLID_GHOSTS
             INTEGER , VALUE :: IBAR,JBAR,KBAR,IBP1,JBP1,KBP1
+            INTEGER, VALUE :: CELL_LB,CELL_UB
+            INTEGER, DEVICE :: CELL_WALL_INDEX(CELL_LB:CELL_UB,-3:3)
             INTEGER , DEVICE , DIMENSION(0:IBP1,0:JBP1,0:*) :: CELL_INDEXD
             LOGICAL , DEVICE , DIMENSION(0:*) :: CELL_SOLID,CELL_EXTERIOR
             REAL(EB) , DEVICE , DIMENSION(0:IBP1,0:JBP1,0:*) :: MUD,KRESD
 
-            INTEGER :: X,II,JJ,KK,IIG,JJG,KKG,IC,BTYPE
+            INTEGER :: X,II,JJ,KK,IIG,JJG,KKG,IC,BTYPE,ICG,IOR,IW
+            LOGICAL :: AFTER_SOLID
 
-            X = (blockIdx%x - 1) * blockDim%x + threadIdx%x - 1
+            X = (blockIdx%x - 1) * blockDim%x + threadIdx%x
 
             IF (X < 1 .OR. X > N_EXTERNAL_WALL_CELLS + N_INTERNAL_WALL_CELLS) RETURN
             BTYPE = WALL_TOPO(X)%BOUNDARY_TYPE
@@ -706,11 +716,22 @@ MODULE G_VELO
             IF (KKG < 1 .OR. KKG > KBAR) RETURN
 
             IC = CELL_INDEXD(II,JJ,KK)
-            IF (CELL_SOLID(IC) .OR. CELL_EXTERIOR(IC)) KRESD(II,JJ,KK) = KRESD(IIG,JJG,KKG)
-
-            ! Extend viscosity from the adjacent gas cell to the boundary ghost cell.
-            IF (BTYPE == SOLID_BOUNDARY .AND. CELL_SOLID(IC)) MUD(II,JJ,KK) = MUD(IIG,JJG,KKG)
-            IF (BTYPE == OPEN_BOUNDARY .OR. BTYPE == MIRROR_BOUNDARY) MUD(II,JJ,KK) = MUD(IIG,JJG,KKG)
+            IF (SOLID_GHOSTS) THEN
+                IF (BTYPE == SOLID_BOUNDARY .AND. CELL_SOLID(IC)) MUD(II,JJ,KK) = MUD(IIG,JJG,KKG)
+            ELSE
+                IF (CELL_SOLID(IC) .OR. CELL_EXTERIOR(IC)) KRESD(II,JJ,KK) = KRESD(IIG,JJG,KKG)
+            ENDIF
+            IF (BTYPE == OPEN_BOUNDARY .OR. BTYPE == MIRROR_BOUNDARY) THEN
+                ! Preserve whether the CPU WALL loop has already updated the adjacent gas cell.
+                AFTER_SOLID = .FALSE.
+                ICG = CELL_INDEXD(IIG,JJG,KKG)
+                DO IOR=-3,3
+                    IW = CELL_WALL_INDEX(ICG,IOR)
+                    IF (IW<1 .OR. IW>=X) CYCLE
+                    IF (WALL_TOPO(IW)%BOUNDARY_TYPE==SOLID_BOUNDARY) AFTER_SOLID = .TRUE.
+                ENDDO
+                IF (SOLID_GHOSTS .EQV. AFTER_SOLID) MUD(II,JJ,KK) = MUD(IIG,JJG,KKG)
+            ENDIF
 
         END SUBROUTINE COPY_GHOST_MU_KRES
         !--------------------------------------------------------------------------
@@ -718,6 +739,7 @@ MODULE G_VELO
         !--------------------------------------------------------------------------
         SUBROUTINE VELOCITY_FLUX_GPU(T,DT,NM,APPLY_TO_ESTIMATED_VARIABLES)
             USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
+            USE PHYSICAL_FUNCTIONS, ONLY: COMPUTE_WIND_COMPONENTS
             REAL(EB) :: T_NOW
             INTEGER, INTENT(IN) :: NM
             REAL(EB), INTENT(IN) :: T,DT
@@ -812,6 +834,15 @@ MODULE G_VELO
                                                         GM%RDXD,GM%RDYD,GM%RDZND,GM%MUD,GM%GZD,IBAR,JBAR,KBAR,GM%RHO_0D,GM%FVZD,GM%WORK12D, &
                                                         GM%CELL_LB,GM%CELL_UB,GM%EDGE_LB,GM%EDGE_UB)
 
+            IF (OPEN_WIND_BOUNDARY) THEN
+                CALL COMPUTE_WIND_COMPONENTS(T,NM)
+                GM%U_WINDD = U_WIND
+                GM%V_WINDD = V_WIND
+                GM%W_WINDD = W_WIND
+            ENDIF
+            IF (ANY(ABS(FVEC)>TWO_EPSILON_EB) .OR. CTRL_DIRECT_FORCE .OR. ANY(ABS(OVEC)>TWO_EPSILON_EB)) &
+                CALL WIND_FORCES_GPU(T,UU,VV,WW,RHOP)
+
             IF (GPU_DEBUG_H2D_D2H) THEN
                 CALL GPU_WAIT(GM%STRM)
                 FVX = GM%FVXD
@@ -821,6 +852,96 @@ MODULE G_VELO
             T_USED(4) = T_USED(4) + CURRENT_TIME() - T_NOW
 
         END SUBROUTINE VELOCITY_FLUX_GPU
+
+        SUBROUTINE WIND_FORCES_GPU(T,UU,VV,WW,RHOP)
+            USE MATH_FUNCTIONS, ONLY: EVALUATE_RAMP
+            USE CONTROL_VARIABLES, ONLY: CONTROL,N_CTRL
+            REAL(EB), INTENT(IN) :: T
+            REAL(EB), DEVICE :: UU(0:IBP1,0:JBP1,0:KBP1),VV(0:IBP1,0:JBP1,0:KBP1), &
+                WW(0:IBP1,0:JBP1,0:KBP1),RHOP(0:IBP1,0:JBP1,0:KBP1)
+            REAL(EB) :: FORCE(3),DIRECTION_FACTOR(3),THETA
+            INTEGER :: N,RAMP_INDEX(3)
+            LOGICAL :: ROTATING
+
+            IF (CTRL_DIRECT_FORCE) THEN
+                DO N=1,N_CTRL
+                    WHERE (CONTROL(N)%CONTROL_FORCE) FVEC = FVEC-CONTROL(N)%INSTANT_VALUE
+                ENDDO
+            ENDIF
+            DIRECTION_FACTOR = 1._EB
+            IF (I_RAMP_DIRECTION_T/=0) THEN
+                THETA = EVALUATE_RAMP(T,I_RAMP_DIRECTION_T)*DEG2RAD
+                DIRECTION_FACTOR(1) = -SIN(THETA)
+                DIRECTION_FACTOR(2) = -COS(THETA)
+            ENDIF
+            RAMP_INDEX = (/I_RAMP_FVX_T,I_RAMP_FVY_T,I_RAMP_FVZ_T/)
+            FORCE = 0._EB
+            DO N=1,3
+                IF (ABS(FVEC(N))<=TWO_EPSILON_EB) CYCLE
+                IF (RAMP_INDEX(N)<=0) RAMP_INDEX(N) = MAX(0,I_RAMP_PGF_T)
+                FORCE(N) = FVEC(N)*EVALUATE_RAMP(T,RAMP_INDEX(N))*DIRECTION_FACTOR(N)
+            ENDDO
+
+            ROTATING = ANY(ABS(OVEC)>TWO_EPSILON_EB)
+            IF (ROTATING) THEN
+                IF (GPU_DEBUG_H2D_D2H) THEN
+                    GM%U_GHOSTD = U_GHOST
+                    GM%V_GHOSTD = V_GHOST
+                    GM%W_GHOSTD = W_GHOST
+                ENDIF
+                GM%WORK7D = 0._EB
+                GM%WORK8D = 0._EB
+                GM%WORK9D = 0._EB
+                CALL COMPUTE_UVWP_1<<<GM%GRDD_3D_BP1,GM%BLKD_3D_BP1,0,GM%STRM>>>( &
+                    GM%WORK7D,GM%WORK8D,GM%WORK9D,UU,VV,WW,IBAR,JBAR,KBAR)
+                IF (N_EXTERNAL_WALL_CELLS>0) CALL WIND_FORCE_GHOST_GPU<<<GM%GRDD_EXTERNAL_WALL_1D,GPU_BLKD_1D,0,GM%STRM>>>( &
+                    GM%WORK7D,GM%WORK8D,GM%WORK9D,GM%U_GHOSTD,GM%V_GHOSTD,GM%W_GHOSTD,GM%WALL_TOPO_AOS, &
+                    N_EXTERNAL_WALL_CELLS,IBP1,JBP1)
+            ENDIF
+            CALL WIND_FORCE_KERNEL_GPU<<<GM%GRDD_3D_BP1,GM%BLKD_3D_BP1,0,GM%STRM>>>( &
+                GM%FVXD,GM%FVYD,GM%FVZD,RHOP,GM%WORK7D,GM%WORK8D,GM%WORK9D, &
+                FORCE(1),FORCE(2),FORCE(3),OVEC(1),OVEC(2),OVEC(3),ROTATING,IBAR,JBAR,KBAR)
+        END SUBROUTINE WIND_FORCES_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE WIND_FORCE_GHOST_GPU(UP,VP,WP,U_GHOST,V_GHOST,W_GHOST,WALL_TOPO,NW,IBP1,JBP1)
+            INTEGER, VALUE :: NW,IBP1,JBP1
+            TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
+            REAL(EB), DEVICE :: UP(0:IBP1,0:JBP1,0:*),VP(0:IBP1,0:JBP1,0:*),WP(0:IBP1,0:JBP1,0:*)
+            REAL(EB), DEVICE :: U_GHOST(1:*),V_GHOST(1:*),W_GHOST(1:*)
+            INTEGER :: IW,I,J,K
+            IW = (BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+            IF (IW>NW) RETURN
+            I = WALL_TOPO(IW)%II
+            J = WALL_TOPO(IW)%JJ
+            K = WALL_TOPO(IW)%KK
+            UP(I,J,K) = U_GHOST(IW)
+            VP(I,J,K) = V_GHOST(IW)
+            WP(I,J,K) = W_GHOST(IW)
+        END SUBROUTINE WIND_FORCE_GHOST_GPU
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE WIND_FORCE_KERNEL_GPU(FVX,FVY,FVZ,RHOP,UP,VP,WP,FX,FY,FZ,OX,OY,OZ,ROTATING,IBAR,JBAR,KBAR)
+            INTEGER, VALUE :: IBAR,JBAR,KBAR
+            LOGICAL, VALUE :: ROTATING
+            REAL(EB), VALUE :: FX,FY,FZ,OX,OY,OZ
+            REAL(EB), DEVICE, DIMENSION(0:IBAR+1,0:JBAR+1,0:*) :: FVX,FVY,FVZ,RHOP,UP,VP,WP
+            INTEGER :: I,J,K
+            I = (BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X-1
+            J = (BLOCKIDX%Y-1)*BLOCKDIM%Y+THREADIDX%Y-1
+            K = (BLOCKIDX%Z-1)*BLOCKDIM%Z+THREADIDX%Z-1
+            IF (I>IBAR .OR. J>JBAR .OR. K>KBAR) RETURN
+            IF (J>=1 .AND. K>=1) THEN
+                FVX(I,J,K) = FVX(I,J,K)-2._EB*FX/(RHOP(I,J,K)+RHOP(I+1,J,K))
+                IF (ROTATING) FVX(I,J,K) = FVX(I,J,K)+OY*(WP(I,J,K)+WP(I+1,J,K))-OZ*(VP(I,J,K)+VP(I+1,J,K))
+            ENDIF
+            IF (I>=1 .AND. K>=1) THEN
+                FVY(I,J,K) = FVY(I,J,K)-2._EB*FY/(RHOP(I,J,K)+RHOP(I,J+1,K))
+                IF (ROTATING) FVY(I,J,K) = FVY(I,J,K)+OZ*(UP(I,J,K)+UP(I,J+1,K))-OX*(WP(I,J,K)+WP(I,J+1,K))
+            ENDIF
+            IF (I>=1 .AND. J>=1) THEN
+                FVZ(I,J,K) = FVZ(I,J,K)-2._EB*FZ/(RHOP(I,J,K)+RHOP(I,J,K+1))
+                IF (ROTATING) FVZ(I,J,K) = FVZ(I,J,K)+OX*(VP(I,J,K)+VP(I,J,K+1))-OY*(UP(I,J,K)+UP(I,J,K+1))
+            ENDIF
+        END SUBROUTINE WIND_FORCE_KERNEL_GPU
 
         SUBROUTINE SYNC_EDGE_OMEGA_TAU_TO_GPU(NM)
             INTEGER, INTENT(IN) :: NM
@@ -1803,8 +1924,9 @@ MODULE G_VELO
             INTEGER , VALUE       :: SIM_MODE_LOCAL,DNS_MODE_LOCAL
             REAL(EB), VALUE       :: VON_KARMAN_CONSTANT_LOCAL,Y_WERNER_WENGLE_LOCAL
 
-            REAL(EB), PARAMETER :: B=5.2_EB,S0=1._EB,EPS=1.E-10_EB
-            REAL(EB) :: U,Y_CELL_CENTER,TAU_W,S_PLUS,DUDY,DY,RKAPPA,DELTA_NU
+            REAL(EB), PARAMETER :: B=5.2_EB,BTILDE_MAX=9.5_EB,BTILDE_ROUGH=8.5_EB
+            REAL(EB), PARAMETER :: S0=1._EB,S1=5.83_EB,S2=30._EB,EPS=1.E-10_EB
+            REAL(EB) :: U,Y_CELL_CENTER,TAU_W,BTILDE,S_PLUS,DUDY,DY,RKAPPA,DELTA_NU
             INTEGER :: ITER
 
             RKAPPA = 1._EB / VON_KARMAN_CONSTANT_LOCAL
@@ -1835,6 +1957,18 @@ MODULE G_VELO
                             U_TAU = SQRT(ABS(TAU_W))
                             DUDY  = U_TAU*RKAPPA / MAX(Y_CELL_CENTER,EPS)
                         ENDIF
+                    ELSE
+                        IF (S_PLUS < S1) THEN
+                            BTILDE = B + RKAPPA*LOG(S_PLUS)
+                        ELSEIF (S_PLUS < S2) THEN
+                            BTILDE = BTILDE_MAX
+                        ELSE
+                            BTILDE = BTILDE_ROUGH
+                        ENDIF
+                        Y_PLUS = Y_CELL_CENTER / S
+                        TAU_W = ( U / (RKAPPA*LOG(Y_PLUS) + BTILDE) )**2
+                        U_TAU = SQRT(ABS(TAU_W))
+                        DUDY  = U_TAU*RKAPPA / Y_CELL_CENTER
                     ENDIF
 
                     DELTA_NU = NU / (U_TAU + EPS)
@@ -1982,6 +2116,12 @@ MODULE G_VELO
             CALL POINT_TO_MESH(NM)
             GM => GPU_MESHES(NM)
 
+            IF (OPEN_WIND_BOUNDARY) THEN
+                GM%U_WINDD = U_WIND
+                GM%V_WINDD = V_WIND
+                GM%W_WINDD = W_WIND
+            ENDIF
+
             DRAG_UVWMAX = 0._EB
 
             EDGE_ACTIVE_LB = 1
@@ -2105,7 +2245,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,1,GM%EDGE_LB,GM%EDGE_UB,0)
+                        SIM_MODE,DNS_MODE,1,GM%EDGE_LB,GM%EDGE_UB,0,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 IF (GM%N_EDGE_AXIS2 > 0) &
                     CALL VELOCITY_BC_GPU_GHOST_KERNEL_AXIS<<<GRD_AXIS2,BLK,0,GM%STRM>>>( &
                         GM%USD,GM%VSD,GM%WSD,GM%RHOSD,GM%TMPD, &
@@ -2132,7 +2272,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,2,GM%EDGE_LB,GM%EDGE_UB,0)
+                        SIM_MODE,DNS_MODE,2,GM%EDGE_LB,GM%EDGE_UB,0,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 IF (GM%N_EDGE_AXIS3 > 0) &
                     CALL VELOCITY_BC_GPU_GHOST_KERNEL_AXIS<<<GRD_AXIS3,BLK,0,GM%STRM>>>( &
                         GM%USD,GM%VSD,GM%WSD,GM%RHOSD,GM%TMPD, &
@@ -2159,7 +2299,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,3,GM%EDGE_LB,GM%EDGE_UB,0)
+                        SIM_MODE,DNS_MODE,3,GM%EDGE_LB,GM%EDGE_UB,0,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 CALL VELOCITY_BC_GPU_TAU_OMEGA_KERNEL<<<GRD,BLK,0,GM%STRM>>>( &
                     GM%EDGE_OMEGA,GM%EDGE_TAU,GM%EDGE_LB,GM%EDGE_UB,EDGE_ACTIVE_LB,EDGE_ACTIVE_UB)
             ELSE
@@ -2199,7 +2339,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,1,GM%EDGE_LB,GM%EDGE_UB,1)
+                        SIM_MODE,DNS_MODE,1,GM%EDGE_LB,GM%EDGE_UB,1,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 IF (GM%N_EDGE_AXIS2 > 0) &
                     CALL VELOCITY_BC_GPU_GHOST_KERNEL_AXIS<<<GRD_AXIS2,BLK,0,GM%STRM>>>( &
                         GM%UD,GM%VD,GM%WD,GM%RHOD,GM%TMPD, &
@@ -2226,7 +2366,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,2,GM%EDGE_LB,GM%EDGE_UB,1)
+                        SIM_MODE,DNS_MODE,2,GM%EDGE_LB,GM%EDGE_UB,1,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 IF (GM%N_EDGE_AXIS3 > 0) &
                     CALL VELOCITY_BC_GPU_GHOST_KERNEL_AXIS<<<GRD_AXIS3,BLK,0,GM%STRM>>>( &
                         GM%UD,GM%VD,GM%WD,GM%RHOD,GM%TMPD, &
@@ -2253,7 +2393,7 @@ MODULE G_VELO
                         IBAR,JBAR,KBAR,I_MAX_TEMP, &
                         SOLID_BOUNDARY,FREE_SLIP_BC,NO_SLIP_BC,WALL_MODEL_BC, &
                         INTERPOLATED_BOUNDARY, &
-                        SIM_MODE,DNS_MODE,3,GM%EDGE_LB,GM%EDGE_UB,1)
+                        SIM_MODE,DNS_MODE,3,GM%EDGE_LB,GM%EDGE_UB,1,OPEN_WIND_BOUNDARY,GM%U_WINDD,GM%V_WINDD,GM%W_WINDD)
                 CALL VELOCITY_BC_GPU_TAU_OMEGA_KERNEL<<<GRD,BLK,0,GM%STRM>>>( &
                     GM%EDGE_OMEGA,GM%EDGE_TAU,GM%EDGE_LB,GM%EDGE_UB,EDGE_ACTIVE_LB,EDGE_ACTIVE_UB)
             ENDIF
@@ -2375,7 +2515,7 @@ MODULE G_VELO
             Y_WERNER_WENGLED, IBAR, &
             JBAR, KBAR, I_MAX_TEMP_LOCAL, SOLID_BOUNDARY_LOCAL, FREE_SLIP_BC_LOCAL, NO_SLIP_BC_LOCAL, WALL_MODEL_BC_LOCAL, &
             INTERPOLATED_BOUNDARY_LOCAL,SIM_MODE_LOCAL,DNS_MODE_LOCAL,IEC_TARGET_LOCAL,EDGE_ACTIVE_LB,EDGE_ACTIVE_UB, &
-            CORRECTOR_LOCAL)
+            CORRECTOR_LOCAL,WIND_BOUNDARY,U_WIND,V_WIND,W_WIND)
             IMPLICIT NONE
             TYPE(WALL_TOPO_AOS_TYPE), DEVICE :: WALL_TOPO(0:*)
 
@@ -2413,6 +2553,8 @@ MODULE G_VELO
 
             REAL(EB), DEVICE :: VON_KARMAN_CONSTANTD,Y_WERNER_WENGLED
             REAL(EB), VALUE :: T_IN
+            LOGICAL, VALUE :: WIND_BOUNDARY
+            REAL(EB), DEVICE, DIMENSION(0:*) :: U_WIND,V_WIND,W_WIND
 
             INTEGER, VALUE :: IBAR,JBAR,KBAR,I_MAX_TEMP_LOCAL
             INTEGER, VALUE :: SOLID_BOUNDARY_LOCAL,FREE_SLIP_BC_LOCAL,NO_SLIP_BC_LOCAL,WALL_MODEL_BC_LOCAL
@@ -2436,8 +2578,9 @@ MODULE G_VELO
             REAL(EB) :: SLIP_COEF,U_TAU,Y_PLUS
             REAL(EB) :: MUA,MU_WALL,RHO_WALL
             REAL(EB) :: VK_LOCAL,YW_LOCAL
+            REAL(EB) :: U_NORM,WIND_NORMAL
 
-            LOGICAL  :: ALL_BLOCKED, OPEN_M, OPEN_P, INTERPOLATED_EDGE
+            LOGICAL  :: ALL_BLOCKED, OPEN_M, OPEN_P, INTERPOLATED_EDGE, WIND_INFLOW
 
 
             IDX = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
@@ -2529,22 +2672,49 @@ MODULE G_VELO
                     IF (IWP > 0) OPEN_P = (WALL_TOPO(IWP)%BOUNDARY_TYPE == OPEN_BOUNDARY)
 
                     IF (OPEN_M .AND. OPEN_P) THEN
+                        U_NORM = 0._EB
+                        WIND_NORMAL = 0._EB
+                        IF (WIND_BOUNDARY) THEN
+                            SELECT CASE(IEC)
+                                CASE(1)
+                                    IF (JJ==0    .AND. IOR== 2) U_NORM = 0.5_EB*(VV(II,0,KK)+VV(II,0,KK+1))
+                                    IF (JJ==JBAR .AND. IOR==-2) U_NORM = 0.5_EB*(VV(II,JBAR,KK)+VV(II,JBAR,KK+1))
+                                    IF (KK==0    .AND. IOR== 3) U_NORM = 0.5_EB*(WW(II,JJ,0)+WW(II,JJ+1,0))
+                                    IF (KK==KBAR .AND. IOR==-3) U_NORM = 0.5_EB*(WW(II,JJ,KBAR)+WW(II,JJ+1,KBAR))
+                                CASE(2)
+                                    IF (II==0    .AND. IOR== 1) U_NORM = 0.5_EB*(UU(0,JJ,KK)+UU(0,JJ,KK+1))
+                                    IF (II==IBAR .AND. IOR==-1) U_NORM = 0.5_EB*(UU(IBAR,JJ,KK)+UU(IBAR,JJ,KK+1))
+                                    IF (KK==0    .AND. IOR== 3) U_NORM = 0.5_EB*(WW(II,JJ,0)+WW(II+1,JJ,0))
+                                    IF (KK==KBAR .AND. IOR==-3) U_NORM = 0.5_EB*(WW(II,JJ,KBAR)+WW(II+1,JJ,KBAR))
+                                CASE(3)
+                                    IF (II==0    .AND. IOR== 1) U_NORM = 0.5_EB*(UU(0,JJ,KK)+UU(0,JJ+1,KK))
+                                    IF (II==IBAR .AND. IOR==-1) U_NORM = 0.5_EB*(UU(IBAR,JJ,KK)+UU(IBAR,JJ+1,KK))
+                                    IF (JJ==0    .AND. IOR== 2) U_NORM = 0.5_EB*(VV(II,0,KK)+VV(II+1,0,KK))
+                                    IF (JJ==JBAR .AND. IOR==-2) U_NORM = 0.5_EB*(VV(II,JBAR,KK)+VV(II+1,JBAR,KK))
+                            END SELECT
+                            SELECT CASE(ABS(IOR))
+                                CASE(1); WIND_NORMAL = U_WIND(KK)
+                                CASE(2); WIND_NORMAL = V_WIND(KK)
+                                CASE(3); WIND_NORMAL = W_WIND(KK)
+                            END SELECT
+                        ENDIF
+                        WIND_INFLOW = WIND_BOUNDARY .AND. REAL(IOR,EB)*WIND_NORMAL>=0._EB .AND. REAL(IOR,EB)*U_NORM>=0._EB
                         SELECT CASE(IEC)
-                        CASE(1)
-                            IF (JJ==0    .AND. IOR== 2) WW(II,0,KK)      = WW(II,1,KK)
-                            IF (JJ==JBAR .AND. IOR==-2) WW(II,JBAR+1,KK) = WW(II,JBAR,KK)
-                            IF (KK==0    .AND. IOR== 3) VV(II,JJ,0)      = VV(II,JJ,1)
-                            IF (KK==KBAR .AND. IOR==-3) VV(II,JJ,KBAR+1) = VV(II,JJ,KBAR)
-                        CASE(2)
-                            IF (II==0    .AND. IOR== 1) WW(0,JJ,KK)      = WW(1,JJ,KK)
-                            IF (II==IBAR .AND. IOR==-1) WW(IBAR+1,JJ,KK) = WW(IBAR,JJ,KK)
-                            IF (KK==0    .AND. IOR== 3) UU(II,JJ,0)      = UU(II,JJ,1)
-                            IF (KK==KBAR .AND. IOR==-3) UU(II,JJ,KBAR+1) = UU(II,JJ,KBAR)
-                        CASE(3)
-                            IF (II==0    .AND. IOR== 1) VV(0,JJ,KK)      = VV(1,JJ,KK)
-                            IF (II==IBAR .AND. IOR==-1) VV(IBAR+1,JJ,KK) = VV(IBAR,JJ,KK)
-                            IF (JJ==0    .AND. IOR== 2) UU(II,0,KK)      = UU(II,1,KK)
-                            IF (JJ==JBAR .AND. IOR==-2) UU(II,JBAR+1,KK) = UU(II,JBAR,KK)
+                            CASE(1)
+                                IF (JJ==0    .AND. IOR== 2) WW(II,0,KK)      = MERGE(W_WIND(KK),WW(II,1,KK),WIND_INFLOW)
+                                IF (JJ==JBAR .AND. IOR==-2) WW(II,JBAR+1,KK) = MERGE(W_WIND(KK),WW(II,JBAR,KK),WIND_INFLOW)
+                                IF (KK==0    .AND. IOR== 3) VV(II,JJ,0)      = MERGE(V_WIND(KK),VV(II,JJ,1),WIND_INFLOW)
+                                IF (KK==KBAR .AND. IOR==-3) VV(II,JJ,KBAR+1) = MERGE(V_WIND(KK),VV(II,JJ,KBAR),WIND_INFLOW)
+                            CASE(2)
+                                IF (II==0    .AND. IOR== 1) WW(0,JJ,KK)      = MERGE(W_WIND(KK),WW(1,JJ,KK),WIND_INFLOW)
+                                IF (II==IBAR .AND. IOR==-1) WW(IBAR+1,JJ,KK) = MERGE(W_WIND(KK),WW(IBAR,JJ,KK),WIND_INFLOW)
+                                IF (KK==0    .AND. IOR== 3) UU(II,JJ,0)      = MERGE(U_WIND(KK),UU(II,JJ,1),WIND_INFLOW)
+                                IF (KK==KBAR .AND. IOR==-3) UU(II,JJ,KBAR+1) = MERGE(U_WIND(KK),UU(II,JJ,KBAR),WIND_INFLOW)
+                            CASE(3)
+                                IF (II==0    .AND. IOR== 1) VV(0,JJ,KK)      = MERGE(V_WIND(KK),VV(1,JJ,KK),WIND_INFLOW)
+                                IF (II==IBAR .AND. IOR==-1) VV(IBAR+1,JJ,KK) = MERGE(V_WIND(KK),VV(IBAR,JJ,KK),WIND_INFLOW)
+                                IF (JJ==0    .AND. IOR== 2) UU(II,0,KK)      = MERGE(U_WIND(KK),UU(II,1,KK),WIND_INFLOW)
+                                IF (JJ==JBAR .AND. IOR==-2) UU(II,JBAR+1,KK) = MERGE(U_WIND(KK),UU(II,JBAR,KK),WIND_INFLOW)
                         END SELECT
 
                         IF (IWM /= 0 .AND. IWP /= 0) RETURN
