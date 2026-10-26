@@ -89,6 +89,7 @@ MODULE G_RADI
             DEALLOCATE(IJK_SLICE_MAP_H)
             GM%RADI%KAPPA_GAS_D = 0._EB
             GM%RADI%UII_D = 0._EB
+            IF (RESTART) GM%RADI%UII_D = UII
             GM%RADI%UIID_D = UIID
             GM%RADI%QR_W_D = 0._EB
             IF (N_LP_ARRAY_INDICES>0 .AND. ASSOCIATED(QR_W)) GM%RADI%QR_W_D = QR_W

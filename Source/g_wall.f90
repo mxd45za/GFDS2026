@@ -281,11 +281,12 @@ MODULE G_WALL
 
         END SUBROUTINE WALL_SYNC_CPU_STATE_TO_GPU
 
-        SUBROUTINE WALL_SYNC_OUTPUT_D2H(NM,OUTPUT_MASK)
+        SUBROUTINE WALL_SYNC_OUTPUT_D2H(NM,OUTPUT_MASK,SAVE_RESTART)
 
             IMPLICIT NONE
 
             INTEGER, INTENT(IN) :: NM,OUTPUT_MASK
+            LOGICAL, INTENT(IN), OPTIONAL :: SAVE_RESTART
             INTEGER :: IW,N_WALL_TOTAL
             TYPE(WALL_TYPE), POINTER :: WC
             TYPE(BOUNDARY_PROP1_TYPE), POINTER :: B1
@@ -297,6 +298,7 @@ MODULE G_WALL
             REAL(EB), ALLOCATABLE :: WALL_ZZ_F_H(:,:),WALL_RHO_D_F_H(:,:),WALL_RHO_D_DZDN_F_H(:,:)
             REAL(EB), ALLOCATABLE :: WALL_M_DOT_ADJUST_H(:,:),WALL_M_DOT_ACTUAL_H(:,:)
             REAL(EB), ALLOCATABLE :: WALL_U_TAU_H(:),WALL_Y_PLUS_H(:)
+            REAL(EB), ALLOCATABLE :: T_IGN_H(:),Q_IN_SMOOTH_H(:),Q_IN_SMOOTH_INT_H(:,:),QDOTPP_INT_H(:,:)
 
             CALL POINT_TO_MESH(NM)
             GM => GPU_MESHES(NM)
@@ -378,10 +380,29 @@ MODULE G_WALL
                 ALLOCATE(WALL_Y_PLUS_H(GM%WALL_LB:GM%WALL_UB)); WALL_Y_PLUS_H = GM%WALL_Y_PLUS
             ENDIF
 
+            IF (PRESENT(SAVE_RESTART)) THEN
+                IF (SAVE_RESTART) THEN
+                    ALLOCATE(T_IGN_H(GM%WALL_LB:GM%WALL_UB),Q_IN_SMOOTH_H(GM%WALL_LB:GM%WALL_UB))
+                    ALLOCATE(Q_IN_SMOOTH_INT_H(GM%WALL_LB:GM%WALL_UB,MAX_QDOTPP_REF), &
+                             QDOTPP_INT_H(GM%WALL_LB:GM%WALL_UB,MAX_QDOTPP_REF))
+                    T_IGN_H = GM%WALL_T_IGN
+                    Q_IN_SMOOTH_H = GM%WALL_Q_IN_SMOOTH
+                    Q_IN_SMOOTH_INT_H = GM%WALL_Q_IN_SMOOTH_INT
+                    QDOTPP_INT_H = GM%WALL_QDOTPP_INT
+                ENDIF
+            ENDIF
+
             DO IW=1,N_WALL_TOTAL
                 WC => WALL(IW)
                 IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY .OR. WC%B1_INDEX<=0) CYCLE
                 B1 => BOUNDARY_PROP1(WC%B1_INDEX)
+                IF (ALLOCATED(T_IGN_H)) THEN
+                    B1%T_IGN = T_IGN_H(IW)
+                    B1%Q_IN_SMOOTH = Q_IN_SMOOTH_H(IW)
+                    IF (ALLOCATED(B1%Q_IN_SMOOTH_INT)) &
+                        B1%Q_IN_SMOOTH_INT = Q_IN_SMOOTH_INT_H(IW,1:SIZE(B1%Q_IN_SMOOTH_INT))
+                    IF (ALLOCATED(B1%QDOTPP_INT)) B1%QDOTPP_INT = QDOTPP_INT_H(IW,1:SIZE(B1%QDOTPP_INT))
+                ENDIF
                 IF (ALLOCATED(WALL_U_TANG_H)) B1%U_TANG = WALL_U_TANG_H(IW)
                 IF (ALLOCATED(WALL_TMP_G_H)) B1%TMP_G = WALL_TMP_G_H(IW)
                 IF (ALLOCATED(WALL_RHO_G_H)) B1%RHO_G = WALL_RHO_G_H(IW)

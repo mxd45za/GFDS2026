@@ -184,7 +184,7 @@ MODULE G_FIRE
                     ENDDO
                 ENDIF
 
-                IF (STOP_STATUS/=NO_STOP) RETURN
+                IF (STOP_STATUS/=NO_STOP .AND. STOP_STATUS/=USER_STOP .AND. STOP_STATUS/=CTRL_STOP) RETURN
 
             ENDDO MESH_LOOP_SERIAL
 
