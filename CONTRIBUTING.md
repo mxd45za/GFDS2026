@@ -1,6 +1,6 @@
 # Contributing to GFDS
 
-Use [GitHub Issues](https://github.com/mxd45za/GFDS/issues) to report reproducible problems. Include the input file, build and run commands, GFDS version or commit, compiler, CUDA, MPI, operating system, CPU, GPU, and complete error output. Include the CPU-mode result when available.
+Use [GitHub Issues](https://github.com/2026/issues) to report reproducible problems. Include the input file, build and run commands, GFDS version or commit, compiler, CUDA, MPI, operating system, CPU, GPU, and complete error output. Include the CPU-mode result when available.
 
 Keep pull requests focused on one change. Changes that affect numerical results should include a reproducible case and a CPU/GPU comparison. Update user instructions when inputs, outputs, build steps, or supported behavior change.
 

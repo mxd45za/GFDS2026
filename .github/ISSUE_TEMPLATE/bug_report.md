@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **Describe the bug**
-A clear description of the problem. Use [GFDS Discussions](https://github.com/mxd45za/GFDS/discussions) for general questions.
+A clear description of the problem. Use [GFDS Discussions](https://github.com/mxd45za/GFDS2026/discussions) for general questions.
 
 **Input and command**
 Attach the input file and list the exact build and run commands.
