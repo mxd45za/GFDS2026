@@ -1624,8 +1624,10 @@ MODULE G_DIVG
             INTEGER, DEVICE, DIMENSION(0:IBAR+1,0:JBAR+1,0:*)   :: CELL_INDEXD, PRESSURE_ZONED
             LOGICAL, DEVICE, DIMENSION(0:*)         :: CELL_SOLID
             REAL(EB), SHARED :: DSUM_SHARED(256), PSUM_SHARED(256)
+            INTEGER, SHARED :: IZ_SHARED(256)
             REAL(EB) :: VC, DSUM_LOCAL, PSUM_LOCAL
             INTEGER :: TID, GID, NCELL, I, J, K, IC, IPZ, IZ, TMP, REM, OFFSET
+            LOGICAL :: DONE
 
             TID   = THREADIDX%X
             GID   = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
@@ -1633,6 +1635,15 @@ MODULE G_DIVG
             IPZ = 0
             DSUM_LOCAL = 0._EB
             PSUM_LOCAL = 0._EB
+
+            ! Zones absent from this block contribute zero
+            IZ = TID
+            DO WHILE (IZ <= N_ZONE_LOCAL)
+                DSUM_PARTIAL(BLOCKIDX%X,IZ) = 0._EB
+                PSUM_PARTIAL(BLOCKIDX%X,IZ) = 0._EB
+                IZ = IZ + BLOCKDIM%X
+            ENDDO
+            CALL SYNCTHREADS()
 
             IF (GID <= NCELL) THEN
                 TMP = GID - 1
@@ -1652,9 +1663,25 @@ MODULE G_DIVG
                 ENDIF
             ENDIF
 
-            DO IZ=1,N_ZONE_LOCAL
+            ! Reduce only the zones present in this block (usually one or two), lowest zone index first.
+            ! The reduction tree for each zone is the same as looping over all zones, so the sums are unchanged.
+            DONE = (IPZ < 1)
+            DO
+                IZ_SHARED(TID) = MERGE(HUGE(1),IPZ,DONE)
+                CALL SYNCTHREADS()
+                OFFSET = BLOCKDIM%X/2
+                DO WHILE (OFFSET >= 1)
+                    IF (TID <= OFFSET) IZ_SHARED(TID) = MIN(IZ_SHARED(TID),IZ_SHARED(TID+OFFSET))
+                    CALL SYNCTHREADS()
+                    OFFSET = OFFSET/2
+                ENDDO
+                IZ = IZ_SHARED(1)
+                CALL SYNCTHREADS()
+                IF (IZ == HUGE(1)) EXIT
+
                 DSUM_SHARED(TID) = MERGE(DSUM_LOCAL,0._EB,IPZ==IZ)
                 PSUM_SHARED(TID) = MERGE(PSUM_LOCAL,0._EB,IPZ==IZ)
+                IF (IPZ == IZ) DONE = .TRUE.
                 CALL SYNCTHREADS()
 
                 OFFSET = BLOCKDIM%X/2

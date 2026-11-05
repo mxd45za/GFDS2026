@@ -379,8 +379,9 @@ MODULE G_MASS
                 ! Pressure zone 0 is static and was copied during GPU initialization.
                 DO I=1,N_ZONE
                     PBAR_S(:,I) = PBAR(:,I) + D_PBAR_DT(I)*DT
-                    GM%PBAR_SD(:,I) = PBAR_S(:,I)
                 ENDDO
+                ! One contiguous host-to-device copy for all zones instead of one copy per zone
+                IF (N_ZONE>0) GM%PBAR_SD(:,1:N_ZONE) = PBAR_S(:,1:N_ZONE)
 
                 ! Restore density-equation velocity at interpolated boundaries.
                 UUD = GM%UD
@@ -465,8 +466,8 @@ MODULE G_MASS
                 ! Corrector pressure-zone update.
                 DO I=1,N_ZONE
                     PBAR(:,I) = 0.5_EB*(PBAR(:,I) + PBAR_S(:,I) + D_PBAR_DT_S(I)*DT)
-                    GM%PBARD(:,I) = PBAR(:,I)
                 ENDDO
+                IF (N_ZONE>0) GM%PBARD(:,1:N_ZONE) = PBAR(:,1:N_ZONE)
 
                 ! Restore density-equation velocity at interpolated boundaries.
                 UUD = GM%USD
