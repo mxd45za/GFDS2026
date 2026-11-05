@@ -13,6 +13,16 @@ MODULE G_RADI
     USE RADCONS
     IMPLICIT NONE
 
+    ! Radiation sweep: per-slice kernels (SLICE, as originally), or the cell data that does not depend on the upwind
+    ! intensities prepared for all cells in one kernel first (RECORDS, default). CHECK runs both and compares.
+    ! Chosen with the environment variable GFDS_RADI_SWEEP=SLICE|RECORDS|CHECK.
+    INTEGER, PARAMETER :: RADI_SWEEP_SLICE=0,RADI_SWEEP_RECORDS=1,RADI_SWEEP_CHECK=2
+    INTEGER :: RADI_SWEEP_MODE=-1
+    INTEGER, PARAMETER :: RADI_SWEEP_N_COEF=10
+    !> Meshes whose largest slice has at most this many cells are swept by one thread block, with a block barrier
+    !> between slices instead of a kernel launch per slice.
+    INTEGER, PARAMETER :: RADI_SWEEP_BLOCK_THREADS=512
+
     CONTAINS
 
         !--------------------------------------------------------------------------
@@ -30,6 +40,7 @@ MODULE G_RADI
             INTEGER, INTENT(IN) :: NM
             INTEGER :: IW,NOM
             INTEGER :: SID,N_SLICE,I,J,K,JSTART,JEND,IDX,NCELL
+            CHARACTER(16) :: SWEEP_MODE_TEXT
             INTEGER, ALLOCATABLE :: WALL_NIC_MIN_H(:),WALL_NIC_MAX_H(:),IJK_SLICE_MAP_H(:,:)
             TYPE(OMESH_TYPE), POINTER :: OM
 
@@ -76,6 +87,29 @@ MODULE G_RADI
                 ENDDO
             ENDDO
             GM%RADI%SLICE_OFFSET_H(GM%RADI%NSLICES+1) = IDX
+
+            IF (RADI_SWEEP_MODE<0) THEN
+                RADI_SWEEP_MODE = RADI_SWEEP_RECORDS
+                CALL GET_ENVIRONMENT_VARIABLE('GFDS_RADI_SWEEP',SWEEP_MODE_TEXT)
+                SELECT CASE(TRIM(SWEEP_MODE_TEXT))
+                    CASE('SLICE','slice') ; RADI_SWEEP_MODE = RADI_SWEEP_SLICE
+                    CASE('CHECK','check') ; RADI_SWEEP_MODE = RADI_SWEEP_CHECK
+                END SELECT
+            ENDIF
+            GM%RADI%MAX_SLICE = 0
+            DO SID=1,GM%RADI%NSLICES
+                GM%RADI%MAX_SLICE = MAX(GM%RADI%MAX_SLICE,GM%RADI%SLICE_OFFSET_H(SID+1)-GM%RADI%SLICE_OFFSET_H(SID))
+            ENDDO
+            IF (RADI_SWEEP_MODE/=RADI_SWEEP_SLICE) THEN
+                ALLOCATE(GM%RADI%SLICE_OFFSET_D(1:GM%RADI%NSLICES+1))
+                GM%RADI%SLICE_OFFSET_D = GM%RADI%SLICE_OFFSET_H
+                ALLOCATE(GM%RADI%SWEEP_LIN_D(1:MAX(1,NCELL)),GM%RADI%SWEEP_FLAG_D(1:MAX(1,NCELL)))
+                ALLOCATE(GM%RADI%SWEEP_COEF_D(1:RADI_SWEEP_N_COEF,1:MAX(1,NCELL)))
+            ENDIF
+            IF (RADI_SWEEP_MODE==RADI_SWEEP_CHECK) THEN
+                ALLOCATE(GM%RADI%SWEEP_CHECK_IL_D(0:IBP1,0:JBP1,0:KBP1),GM%RADI%SWEEP_CHECK_IL_UP_D(0:IBP1,0:JBP1,0:KBP1))
+                ALLOCATE(GM%RADI%SWEEP_CHECK_COUNT_D(2))
+            ENDIF
 
             ALLOCATE(GM%RADI%IJK_SLICE_MAP_D(1:NCELL,1:3))
             ALLOCATE(GM%RADI%KAPPA_GAS_D(0:IBP1,0:JBP1,0:KBP1))
@@ -624,8 +658,6 @@ MODULE G_RADI
                         ! Sweep the selected discrete directions.
                         ANGLE_LOOP: DO N = NSTART,NEND,NSTEP
 
-                            CELL_ILW = -HUGE(EB)
-
                             ! Apply wall conditions first, then dispatch interpolated walls by donor mesh.
 
                             ! Boundary conditions: Intensities leaving the boundaries.
@@ -802,6 +834,34 @@ MODULE G_RADI
             INTEGER, INTENT(IN) :: N_IN,ISTEP_IN,JSTEP_IN,KSTEP_IN
             REAL(EB), INTENT(IN) :: RSA_RAT_IN
             INTEGER :: SID,BASE,M_IJK,GRDD_1D
+            INTEGER :: N_DIFF(2)
+
+            SELECT CASE(RADI_SWEEP_MODE)
+                CASE(RADI_SWEEP_RECORDS)
+                    CALL RADI_RUN_SWEEP_RECORDS(IL_D,IL_UP_D)
+                    RETURN
+                CASE(RADI_SWEEP_CHECK)
+                    ! Per-slice sweep on a copy, then the record sweep on IL_D; both start from the same IL.
+                    GM%RADI%SWEEP_CHECK_IL_D = IL_D
+                    GM%RADI%SWEEP_CHECK_IL_UP_D = IL_UP_D
+                    CALL RADI_RUN_SWEEP_SLICES(GM%RADI%SWEEP_CHECK_IL_D,GM%RADI%SWEEP_CHECK_IL_UP_D)
+                    CALL RADI_RUN_SWEEP_RECORDS(IL_D,IL_UP_D)
+                    GM%RADI%SWEEP_CHECK_COUNT_D = 0
+                    CALL RADIATION_SWEEP_COMPARE_GPU<<<GM%GRDD_3D_BP1,GM%BLKD_3D_BP1>>>( &
+                        IL_D,IL_UP_D,GM%RADI%SWEEP_CHECK_IL_D,GM%RADI%SWEEP_CHECK_IL_UP_D,GM%RADI%SWEEP_CHECK_COUNT_D, &
+                        IBP1,JBP1,KBP1,SOLID_PARTICLES)
+                    N_DIFF = GM%RADI%SWEEP_CHECK_COUNT_D
+                    IF (ANY(N_DIFF>0)) WRITE(LU_ERR,'(A,I0,A,I0,A,I0,A,I0)') 'WARNING: radiation sweep check, mesh ', &
+                        GM%NM,', angle ',N_IN,': cells differing in IL ',N_DIFF(1),', in IL_UP ',N_DIFF(2)
+                    RETURN
+            END SELECT
+
+            CALL RADI_RUN_SWEEP_SLICES(IL_D,IL_UP_D)
+
+            CONTAINS
+
+            SUBROUTINE RADI_RUN_SWEEP_SLICES(IL_D,IL_UP_D)
+            REAL(EB), DEVICE, DIMENSION(0:,0:,0:) :: IL_D,IL_UP_D
 
             DO SID=1,GM%RADI%NSLICES
                 BASE = GM%RADI%SLICE_OFFSET_H(SID)
@@ -814,6 +874,45 @@ MODULE G_RADI
                     N_IN,BASE,M_IJK,ISTEP_IN,JSTEP_IN,KSTEP_IN,RSA_RAT_IN,RFPI,SOLID_PARTICLES, &
                     IBP1,JBP1,KBP1,GM%CELL_LB,GM%CELL_UB,SIZE(CELL_ILW_D,1),SIZE(GM%RADI%IJK_SLICE_MAP_D,1))
             ENDDO
+
+            END SUBROUTINE RADI_RUN_SWEEP_SLICES
+
+            SUBROUTINE RADI_RUN_SWEEP_RECORDS(IL_D,IL_UP_D)
+            REAL(EB), DEVICE, DIMENSION(0:,0:,0:) :: IL_D,IL_UP_D
+            INTEGER :: NCELL,SY,SZ,DXU,DYU,DZU
+
+            NCELL = SIZE(GM%RADI%IJK_SLICE_MAP_D,1)
+            IF (GM%RADI%NSLICES<=0 .OR. NCELL<=0) RETURN
+            SY = IBP1+1
+            SZ = (IBP1+1)*(JBP1+1)
+            DXU = ISTEP_IN
+            DYU = JSTEP_IN*SY
+            DZU = KSTEP_IN*SZ
+
+            CALL RADIATION_SWEEP_PREPARE_GPU<<<(NCELL+GPU_BLKD_1D-1)/GPU_BLKD_1D,GPU_BLKD_1D>>>( &
+                GM%RADI%SWEEP_COEF_D,GM%RADI%SWEEP_LIN_D,GM%RADI%SWEEP_FLAG_D, &
+                CELL_ILW_D,EXTCOE_D,KFST4_GAS_D,KFST4_PART_D,SCAEFF_D,SCAEFF_G_D,UIIOLD_D, &
+                GM%CELL_INDEXD,GM%CELL_SOLID,GM%RADI%IJK_SLICE_MAP_D,GM%DXD,GM%DYD,GM%DZD,DLX_D,DLY_D,DLZ_D,RSA_D, &
+                N_IN,ISTEP_IN,JSTEP_IN,KSTEP_IN,RSA_RAT_IN,RFPI,SY,SZ, &
+                IBP1,JBP1,KBP1,GM%CELL_LB,GM%CELL_UB,SIZE(CELL_ILW_D,1),NCELL,RADI_SWEEP_N_COEF)
+
+            IF (GM%RADI%MAX_SLICE<=RADI_SWEEP_BLOCK_THREADS) THEN
+                CALL RADIATION_SWEEP_BLOCK_GPU<<<1,RADI_SWEEP_BLOCK_THREADS>>>( &
+                    IL_D,IL_UP_D,GM%RADI%SWEEP_COEF_D,GM%RADI%SWEEP_LIN_D,GM%RADI%SWEEP_FLAG_D,GM%RADI%SLICE_OFFSET_D, &
+                    GM%RADI%NSLICES,DXU,DYU,DZU,SOLID_PARTICLES,NCELL,RADI_SWEEP_N_COEF)
+            ELSE
+                DO SID=1,GM%RADI%NSLICES
+                    BASE = GM%RADI%SLICE_OFFSET_H(SID)
+                    M_IJK = GM%RADI%SLICE_OFFSET_H(SID+1) - BASE
+                    IF (M_IJK <= 0) CYCLE
+                    GRDD_1D = (M_IJK + GPU_BLKD_1D - 1) / GPU_BLKD_1D
+                    CALL RADIATION_SWEEP_RECORD_SLICE_GPU<<<GRDD_1D,GPU_BLKD_1D>>>( &
+                        IL_D,IL_UP_D,GM%RADI%SWEEP_COEF_D,GM%RADI%SWEEP_LIN_D,GM%RADI%SWEEP_FLAG_D, &
+                        BASE,M_IJK,DXU,DYU,DZU,SOLID_PARTICLES,NCELL,RADI_SWEEP_N_COEF)
+                ENDDO
+            ENDIF
+
+            END SUBROUTINE RADI_RUN_SWEEP_RECORDS
 
         END SUBROUTINE RADI_RUN_SWEEP
 
@@ -1430,6 +1529,180 @@ MODULE G_RADI
                 (SCAEFF_D(I,J,K)+SCAEFF_G_D(I,J,K))*UIIOLD_D(I,J,K) ) ) )
 
         END SUBROUTINE RADIATION_SWEEP_3D_SLICE_GPU
+
+        !> Record sweep, step 1, all cells of the mesh at once (IDX in slice order): everything that does not depend on
+        !> the upwind intensities, with the same arithmetic as RADIATION_SWEEP_3D_SLICE_GPU. COEF: 1-3 AXU,AYU,AZU,
+        !> 4 RAP, 5 VC*RSA*RFPI, 6 source term, 7-9 wall intensities replacing the upwind ones, 10 A_SUM.
+        !> FLAG: +1/+2/+4 wall intensity in x/y/z, 8 solid cell (skipped). LIN: offset of (I,J,K) in IL_D.
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE RADIATION_SWEEP_PREPARE_GPU(COEF_D,LIN_D,FLAG_D, &
+            CELL_ILW_D,EXTCOE_D,KFST4_GAS_D,KFST4_PART_D,SCAEFF_D,SCAEFF_G_D,UIIOLD_D, &
+            CELL_INDEX_D,CELL_SOLID_D,IJK_SLICE_MAP_D,DX_D,DY_D,DZ_D,DLX_D,DLY_D,DLZ_D,RSA_D, &
+            N_IN,ISTEP_IN,JSTEP_IN,KSTEP_IN,RSA_RAT_IN,RFPI_IN,SY_IN,SZ_IN, &
+            IBP1_IN,JBP1_IN,KBP1_IN,CELL_LB_IN,CELL_UB_IN,CELL_ILW_SIZE_IN,NCELL_IN,NCOEF_IN)
+
+            IMPLICIT NONE
+            INTEGER, VALUE :: N_IN,ISTEP_IN,JSTEP_IN,KSTEP_IN,SY_IN,SZ_IN,NCOEF_IN
+            INTEGER, VALUE :: IBP1_IN,JBP1_IN,KBP1_IN,CELL_LB_IN,CELL_UB_IN,CELL_ILW_SIZE_IN,NCELL_IN
+            REAL(EB), VALUE :: RSA_RAT_IN,RFPI_IN
+            REAL(EB), DEVICE, DIMENSION(1:NCOEF_IN,1:NCELL_IN) :: COEF_D
+            INTEGER, DEVICE, DIMENSION(1:NCELL_IN) :: LIN_D,FLAG_D
+            REAL(EB), DEVICE, DIMENSION(0:IBP1_IN,0:JBP1_IN,0:*) :: EXTCOE_D,KFST4_GAS_D,KFST4_PART_D, &
+                SCAEFF_D,SCAEFF_G_D,UIIOLD_D
+            REAL(EB), DEVICE, DIMENSION(1:CELL_ILW_SIZE_IN,1:*) :: CELL_ILW_D
+            INTEGER, DEVICE, DIMENSION(0:IBP1_IN,0:JBP1_IN,0:*) :: CELL_INDEX_D
+            LOGICAL, DEVICE, DIMENSION(CELL_LB_IN:*) :: CELL_SOLID_D
+            INTEGER, DEVICE, DIMENSION(1:NCELL_IN,1:3) :: IJK_SLICE_MAP_D
+            REAL(EB), DEVICE, DIMENSION(0:*) :: DX_D,DY_D,DZ_D
+            REAL(EB), DEVICE, DIMENSION(*) :: DLX_D,DLY_D,DLZ_D,RSA_D
+            INTEGER :: IDX,I,J,K,IC,FLAG
+            REAL(EB) :: AY1,AX,VC1,AZ1,VC,AY,AZ,AXU,AYU,AZU,AXD,AYD,AZD,AFD,A_SUM,ILXU,ILYU,ILZU
+
+            IDX = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IDX < 1 .OR. IDX > NCELL_IN) RETURN
+
+            I = IJK_SLICE_MAP_D(IDX,1)
+            J = IJK_SLICE_MAP_D(IDX,2)
+            K = IJK_SLICE_MAP_D(IDX,3)
+            IF (ISTEP_IN < 0) I = IBP1_IN - I
+            IF (JSTEP_IN < 0) J = JBP1_IN - J
+            IF (KSTEP_IN < 0) K = KBP1_IN - K
+            LIN_D(IDX) = I + SY_IN*J + SZ_IN*K
+
+            FLAG = 0
+            ILXU = 0._EB
+            ILYU = 0._EB
+            ILZU = 0._EB
+            IC = CELL_INDEX_D(I,J,K)
+            IF (IC /= 0) THEN
+                IF (CELL_SOLID_D(IC)) THEN
+                    FLAG_D(IDX) = 8
+                    RETURN
+                ENDIF
+                IF (CELL_ILW_D(IC,1)>-1.E6_EB) THEN ; FLAG = FLAG + 1 ; ILXU = CELL_ILW_D(IC,1) ; ENDIF
+                IF (CELL_ILW_D(IC,2)>-1.E6_EB) THEN ; FLAG = FLAG + 2 ; ILYU = CELL_ILW_D(IC,2) ; ENDIF
+                IF (CELL_ILW_D(IC,3)>-1.E6_EB) THEN ; FLAG = FLAG + 4 ; ILZU = CELL_ILW_D(IC,3) ; ENDIF
+            ENDIF
+            FLAG_D(IDX) = FLAG
+
+            AY1 = DZ_D(K) * ABS(DLY_D(N_IN))
+            AX  = DY_D(J) * DZ_D(K) * ABS(DLX_D(N_IN))
+            VC1 = DY_D(J) * DZ_D(K)
+            AZ1 = DY_D(J) * ABS(DLZ_D(N_IN))
+
+            VC = DX_D(I) * VC1
+            AY = DX_D(I) * AY1
+            AZ = DX_D(I) * AZ1
+
+            AXU = AX; AXD = AX
+            AYU = AY; AYD = AY
+            AZU = AZ; AZD = AZ
+            AFD = 0._EB
+            A_SUM = AXD + AYD + AZD + AFD
+
+            COEF_D(1,IDX) = AXU
+            COEF_D(2,IDX) = AYU
+            COEF_D(3,IDX) = AZU
+            COEF_D(4,IDX) = 1._EB/(A_SUM + EXTCOE_D(I,J,K)*VC*RSA_D(N_IN))
+            COEF_D(5,IDX) = VC*RSA_D(N_IN)*RFPI_IN
+            COEF_D(6,IDX) = KFST4_GAS_D(I,J,K) + KFST4_PART_D(I,J,K) + RSA_RAT_IN * &
+                            (SCAEFF_D(I,J,K)+SCAEFF_G_D(I,J,K))*UIIOLD_D(I,J,K)
+            COEF_D(7,IDX) = ILXU
+            COEF_D(8,IDX) = ILYU
+            COEF_D(9,IDX) = ILZU
+            COEF_D(10,IDX) = A_SUM
+
+        END SUBROUTINE RADIATION_SWEEP_PREPARE_GPU
+
+        !> Record sweep, step 2: intensity of one cell from its record and the upwind intensities.
+
+        ATTRIBUTES(DEVICE) SUBROUTINE RADIATION_SWEEP_RECORD_CELL(IDX,IL_D,IL_UP_D,COEF_D,LIN_D,FLAG_D, &
+            DXU_IN,DYU_IN,DZU_IN,SOLID_PARTICLES_IN,NCELL_IN,NCOEF_IN)
+            IMPLICIT NONE
+            INTEGER, VALUE :: IDX,DXU_IN,DYU_IN,DZU_IN,NCELL_IN,NCOEF_IN
+            LOGICAL, VALUE :: SOLID_PARTICLES_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: IL_D,IL_UP_D
+            REAL(EB), DEVICE, DIMENSION(1:NCOEF_IN,1:NCELL_IN) :: COEF_D
+            INTEGER, DEVICE, DIMENSION(1:NCELL_IN) :: LIN_D,FLAG_D
+            INTEGER :: FLAG,L
+            REAL(EB) :: ILXU,ILYU,ILZU,AILFU,AIU_SUM
+
+            FLAG = FLAG_D(IDX)
+            IF (FLAG>=8) RETURN
+            L = LIN_D(IDX)
+            IF (IAND(FLAG,1)/=0) THEN ; ILXU = COEF_D(7,IDX) ; ELSE ; ILXU = IL_D(L-DXU_IN) ; ENDIF
+            IF (IAND(FLAG,2)/=0) THEN ; ILYU = COEF_D(8,IDX) ; ELSE ; ILYU = IL_D(L-DYU_IN) ; ENDIF
+            IF (IAND(FLAG,4)/=0) THEN ; ILZU = COEF_D(9,IDX) ; ELSE ; ILZU = IL_D(L-DZU_IN) ; ENDIF
+            AILFU = 0._EB
+            AIU_SUM = COEF_D(1,IDX)*ILXU + COEF_D(2,IDX)*ILYU + COEF_D(3,IDX)*ILZU + AILFU
+            IF (SOLID_PARTICLES_IN) IL_UP_D(L) = MAX(0._EB,AIU_SUM/COEF_D(10,IDX))
+            IL_D(L) = MAX(0._EB, COEF_D(4,IDX) * (AIU_SUM + COEF_D(5,IDX)*COEF_D(6,IDX)))
+
+        END SUBROUTINE RADIATION_SWEEP_RECORD_CELL
+
+        !> Record sweep of one slice, one thread per cell.
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE RADIATION_SWEEP_RECORD_SLICE_GPU(IL_D,IL_UP_D,COEF_D,LIN_D,FLAG_D, &
+            BASE_IN,M_IJK_IN,DXU_IN,DYU_IN,DZU_IN,SOLID_PARTICLES_IN,NCELL_IN,NCOEF_IN)
+            IMPLICIT NONE
+            INTEGER, VALUE :: BASE_IN,M_IJK_IN,DXU_IN,DYU_IN,DZU_IN,NCELL_IN,NCOEF_IN
+            LOGICAL, VALUE :: SOLID_PARTICLES_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: IL_D,IL_UP_D
+            REAL(EB), DEVICE, DIMENSION(1:NCOEF_IN,1:NCELL_IN) :: COEF_D
+            INTEGER, DEVICE, DIMENSION(1:NCELL_IN) :: LIN_D,FLAG_D
+            INTEGER :: IJK
+
+            IJK = (BLOCKIDX%X - 1) * BLOCKDIM%X + THREADIDX%X
+            IF (IJK < 1 .OR. IJK > M_IJK_IN) RETURN
+            CALL RADIATION_SWEEP_RECORD_CELL(BASE_IN+IJK-1,IL_D,IL_UP_D,COEF_D,LIN_D,FLAG_D, &
+                DXU_IN,DYU_IN,DZU_IN,SOLID_PARTICLES_IN,NCELL_IN,NCOEF_IN)
+
+        END SUBROUTINE RADIATION_SWEEP_RECORD_SLICE_GPU
+
+        !> Record sweep of all slices by one thread block, a block barrier between slices (meshes with small slices).
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE RADIATION_SWEEP_BLOCK_GPU(IL_D,IL_UP_D,COEF_D,LIN_D,FLAG_D,SLICE_OFFSET_D, &
+            NSLICES_IN,DXU_IN,DYU_IN,DZU_IN,SOLID_PARTICLES_IN,NCELL_IN,NCOEF_IN)
+            IMPLICIT NONE
+            INTEGER, VALUE :: NSLICES_IN,DXU_IN,DYU_IN,DZU_IN,NCELL_IN,NCOEF_IN
+            LOGICAL, VALUE :: SOLID_PARTICLES_IN
+            REAL(EB), DEVICE, DIMENSION(0:*) :: IL_D,IL_UP_D
+            REAL(EB), DEVICE, DIMENSION(1:NCOEF_IN,1:NCELL_IN) :: COEF_D
+            INTEGER, DEVICE, DIMENSION(1:NCELL_IN) :: LIN_D,FLAG_D
+            INTEGER, DEVICE, DIMENSION(*) :: SLICE_OFFSET_D
+            INTEGER :: SID,IDX
+
+            DO SID=1,NSLICES_IN
+                DO IDX=SLICE_OFFSET_D(SID)+THREADIDX%X-1,SLICE_OFFSET_D(SID+1)-1,BLOCKDIM%X
+                    CALL RADIATION_SWEEP_RECORD_CELL(IDX,IL_D,IL_UP_D,COEF_D,LIN_D,FLAG_D, &
+                        DXU_IN,DYU_IN,DZU_IN,SOLID_PARTICLES_IN,NCELL_IN,NCOEF_IN)
+                ENDDO
+                CALL SYNCTHREADS()
+            ENDDO
+
+        END SUBROUTINE RADIATION_SWEEP_BLOCK_GPU
+
+        !> GFDS_RADI_SWEEP=CHECK: count cells where the record sweep differs from the per-slice sweep.
+
+        ATTRIBUTES(GLOBAL) SUBROUTINE RADIATION_SWEEP_COMPARE_GPU(IL_D,IL_UP_D,REF_IL_D,REF_IL_UP_D,COUNT_D,IBP1_IN,JBP1_IN,KBP1_IN, &
+            SOLID_PARTICLES_IN)
+            IMPLICIT NONE
+            INTEGER, VALUE :: IBP1_IN,JBP1_IN,KBP1_IN
+            LOGICAL, VALUE :: SOLID_PARTICLES_IN
+            REAL(EB), DEVICE, DIMENSION(0:IBP1_IN,0:JBP1_IN,0:KBP1_IN) :: IL_D,IL_UP_D,REF_IL_D,REF_IL_UP_D
+            INTEGER, DEVICE :: COUNT_D(2)
+            INTEGER :: I,J,K,ISTAT
+
+            I = (BLOCKIDX%X-1)*BLOCKDIM%X + THREADIDX%X - 1
+            J = (BLOCKIDX%Y-1)*BLOCKDIM%Y + THREADIDX%Y - 1
+            K = (BLOCKIDX%Z-1)*BLOCKDIM%Z + THREADIDX%Z - 1
+            IF (I>IBP1_IN .OR. J>JBP1_IN .OR. K>KBP1_IN) RETURN
+            IF (IL_D(I,J,K)/=REF_IL_D(I,J,K)) ISTAT = ATOMICADD(COUNT_D(1),1)
+            IF (SOLID_PARTICLES_IN) THEN
+                IF (IL_UP_D(I,J,K)/=REF_IL_UP_D(I,J,K)) ISTAT = ATOMICADD(COUNT_D(2),1)
+            ENDIF
+
+        END SUBROUTINE RADIATION_SWEEP_COMPARE_GPU
 
 
         ATTRIBUTES(GLOBAL) SUBROUTINE RADIATION_WALL_INCOMING_GPU(INRAD_W_D,BOUNDARY_RADIA_ILW_D,IL_D,WALL_TOPO, &
