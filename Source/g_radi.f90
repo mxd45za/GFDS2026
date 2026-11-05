@@ -440,6 +440,7 @@ MODULE G_RADI
             TYPE(CFACE_TYPE), POINTER :: CFA
             TYPE(BOUNDARY_RADIA_TYPE), POINTER :: BR,BR_UP,BR_DOWN
             TYPE(BOUNDARY_COORD_TYPE), POINTER :: BC
+            TYPE(BOUNDARY_PROP1_TYPE), POINTER :: B1
             TYPE(INITIALIZATION_TYPE), POINTER :: IN
             CHARACTER(20) :: FORMT
 
@@ -734,6 +735,40 @@ MODULE G_RADI
                                     SIZE(GM%RADI%OMESH(NOM)%IL_S_D,1),SIZE(GM%RADI%OMESH(NOM)%IL_S_D,2))
                             ENDDO
 
+                            ! Projected intensity on particles with a specified ORIENTATION (e.g. DEVC RADIATIVE HEAT FLUX GAS),
+                            ! as in RADIATION_FVM; IL of the particle cell is read from the device.
+                            IF (ORIENTED_PARTICLES) THEN
+                                GPU_PARTICLE_RADIATION_LOOP: DO IP=1,NLP
+                                    LP => LAGRANGIAN_PARTICLE(IP)
+                                    LPC => LAGRANGIAN_PARTICLE_CLASS(LP%CLASS_INDEX)
+                                    IF (LPC%N_ORIENTATION==0) CYCLE GPU_PARTICLE_RADIATION_LOOP
+                                    BC => BOUNDARY_COORD(LP%BC_INDEX)
+                                    TEMP_ORIENTATION(1:3) = ORIENTATION_VECTOR(1:3,LP%ORIENTATION_INDEX)
+                                    IF (LP%INIT_INDEX > 0) THEN
+                                        IN => INITIALIZATION(LP%INIT_INDEX)
+                                        IF (ANY(IN%ORIENTATION_RAMP_INDEX > 0)) THEN
+                                            TEMP_ORIENTATION(1) = EVALUATE_RAMP(GM%RADI%T,IN%ORIENTATION_RAMP_INDEX(1))
+                                            TEMP_ORIENTATION(2) = EVALUATE_RAMP(GM%RADI%T,IN%ORIENTATION_RAMP_INDEX(2))
+                                            TEMP_ORIENTATION(3) = EVALUATE_RAMP(GM%RADI%T,IN%ORIENTATION_RAMP_INDEX(3))
+                                            TEMP_ORIENTATION = TEMP_ORIENTATION / &
+                                                (SQRT(TEMP_ORIENTATION(1)**2+TEMP_ORIENTATION(2)**2+TEMP_ORIENTATION(3)**2)+TWO_EPSILON_EB)
+                                        ENDIF
+                                    ENDIF
+                                    COS_DLO = -DOT_PRODUCT(TEMP_ORIENTATION(1:3),DLANG(1:3,N))
+                                    IF (COS_DLO > COS_HALF_VIEW_ANGLE(LP%ORIENTATION_INDEX)) THEN
+                                        DLO = -(TEMP_ORIENTATION(1)*DLX(N) + TEMP_ORIENTATION(2)*DLY(N) + TEMP_ORIENTATION(3)*DLZ(N))
+                                        BR => BOUNDARY_RADIA(LP%BR_INDEX)
+                                        IF (LPC%MASSLESS_TARGET) THEN
+                                            QVAL = IL_D(BC%IIG,BC%JJG,BC%KKG)
+                                            BR%BAND(IBND)%ILW(N) = DLO*QVAL*VIEW_ANGLE_FACTOR(LP%ORIENTATION_INDEX)
+                                            IF (N==NEAREST_RADIATION_ANGLE(LP%ORIENTATION_INDEX)) BR%IL(IBND) = QVAL
+                                        ELSE
+                                            QVAL = IL_UP_D(BC%IIG,BC%JJG,BC%KKG)
+                                            BR%BAND(IBND)%ILW(N) = DLO*QVAL*VIEW_ANGLE_FACTOR(LP%ORIENTATION_INDEX)
+                                        ENDIF
+                                    ENDIF
+                                ENDDO GPU_PARTICLE_RADIATION_LOOP
+                            ENDIF
 
                         ENDDO ANGLE_LOOP
 
@@ -751,6 +786,34 @@ MODULE G_RADI
 
 
             ENDDO BAND_LOOP
+
+            ! Incoming radiative flux onto oriented particles (massless targets of DEVC RADIATIVE HEAT FLUX GAS),
+            ! as at the end of RADIATION_FVM. Non-oriented particles would need UII on the host and are left as they were.
+            IF (SOLID_PARTICLES .AND. UPDATE_INTENSITY .AND. ORIENTED_PARTICLES) THEN
+                GPU_PARTICLE_FLUX_LOOP: DO IP=1,NLP
+                    LP => LAGRANGIAN_PARTICLE(IP)
+                    LPC => LAGRANGIAN_PARTICLE_CLASS(LP%CLASS_INDEX)
+                    IF (.NOT.(LPC%SOLID_PARTICLE .OR. LPC%MASSLESS_TARGET)) CYCLE GPU_PARTICLE_FLUX_LOOP
+                    IF (LP%ORIENTATION_INDEX<=0) CYCLE GPU_PARTICLE_FLUX_LOOP
+                    SF => SURFACE(LPC%SURF_INDEX)
+                    B1 => BOUNDARY_PROP1(LP%B1_INDEX)
+                    IF (SF%EXTERNAL_FLUX > TWO_EPSILON_EB) THEN
+                        IF (ABS(T_BEGIN) <= SPACING(B1%T_IGN)) THEN
+                            TSI = GM%RADI%T
+                        ELSE
+                            TSI = GM%RADI%T - B1%T_IGN
+                        ENDIF
+                        EFLUX = EVALUATE_RAMP(TSI,SF%RAMP(TIME_EFLUX)%INDEX,TAU=SF%RAMP(TIME_EFLUX)%TAU)*SF%EXTERNAL_FLUX
+                    ELSE
+                        EFLUX = 0._EB
+                    ENDIF
+                    BR => BOUNDARY_RADIA(LP%BR_INDEX)
+                    B1%Q_RAD_IN = 0._EB
+                    DO IBND=1,NUMBER_SPECTRAL_BANDS
+                        B1%Q_RAD_IN = B1%Q_RAD_IN + B1%EMISSIVITY * (WEIGH_CYL*SUM(BR%BAND(IBND)%ILW(1:NUMBER_RADIATION_ANGLES)) + EFLUX)
+                    ENDDO
+                ENDDO GPU_PARTICLE_FLUX_LOOP
+            ENDIF
 
             ! Sum direction groups and update open-boundary incoming heat flux.
 
