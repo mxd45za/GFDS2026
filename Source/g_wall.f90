@@ -8,6 +8,7 @@ MODULE G_WALL
     USE TYPES, ONLY: WALL_TYPE,BOUNDARY_PROP1_TYPE,BOUNDARY_PROP2_TYPE,SURFACE_TYPE,VENTS_TYPE,BOUNDARY_COORD_TYPE
     USE G_MESH_POINTERS
     USE G_HT1D, ONLY: SOLID_HEAT_TRANSFER_GPU
+    USE HT3D_GPU, ONLY: HT3D_HAS_MESH,HT3D_PREPARE
     USE G_FUNC
     USE G_ERRO, ONLY: GPU_WAIT
     USE G_VELO, ONLY: WALL_MODEL_DEVICE,COMPUTE_WALL_MODEL_OUTPUT_GPU
@@ -745,13 +746,14 @@ MODULE G_WALL
                 SF_RAMP_TEMP_TAU, GM%WALL_T_IGN, GM%WALL_TMP_F, GM%WALL_HEAT_TRANS_COEF, GM%WALL_Q_CON_F, GM%WALL_K_G, GM%WALL_EMISSIVITY, &
                 GM%WALL_Q_RAD_OUT, MU_RSQMW_ZD, K_RSQMW_ZD, RSQ_MW_ZD, RAMP_T_MIN_D, RAMP_SPAN_D, RAMP_RDT_D, RAMP_NPOINTS_D, &
                 RAMP_OFFSET_D,RAMP_INTERP_D,T,T_BEGIN,GRAV,PR_AIR,MERGE(1,0,RADIATION),I_MAX_TEMP)
-            ! CPU WALL_BC advances thermally thick 1-D walls once per
-            ! WALL_INCREMENT on the corrector.  The same interval is assembled
-            ! and solved entirely on the device after the gas-side HTC stage.
+            ! Advance thermally thick walls on the corrector.
             IF (.NOT.INITIALIZATION_PHASE .AND. CORRECTOR .AND. &
                 WALL_COUNTER==WALL_INCREMENT) THEN
                 DT_BC_HT1D = T-BC_CLOCK
                 IF (DT_BC_HT1D>TWO_EPSILON_EB) THEN
+                    IF (SOLID_HEAT_TRANSFER_3D .AND. HT3D_HAS_MESH(NM)) THEN
+                        CALL HT3D_PREPARE(NM)
+                    ENDIF
                     CALL SOLID_HEAT_TRANSFER_GPU(NM,T,DT_BC_HT1D,TMPMIN, TMPMAX,MERGE(1,0,RADIATION))
                 ENDIF
                 BC_CLOCK = T

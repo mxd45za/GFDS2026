@@ -1,0 +1,934 @@
+! GPU lateral temperature exchange for three-dimensional solid conduction.
+MODULE HT3D_GPU
+
+    USE PRECISION_PARAMETERS, ONLY: EB
+    USE GLOBAL_CONSTANTS, ONLY: SOLID_BOUNDARY,THERMALLY_THICK,TWO_EPSILON_EB,LOWER_MESH_INDEX, &
+                                UPPER_MESH_INDEX,NMESHES,N_MPI_PROCESSES,MY_RANK
+    USE MESH_POINTERS
+    USE G_CONS, ONLY: PROCESS
+    USE TYPES, ONLY: WALL_TYPE,THIN_WALL_TYPE,SURFACE_TYPE,BOUNDARY_ONE_D_TYPE,BOUNDARY_THR_D_TYPE,BOUNDARY_COORD_TYPE
+    USE G_MESH, ONLY: GPU_MESHES
+    USE G_HT1D, ONLY: HT1D_GPU_WALL_ACTIVE,HT1D_GPU_THIN_WALL_ACTIVE
+    USE G_ERRO, ONLY: GPU_WAIT,GPU_WAIT_ALL,GPU_MPI_IRECV,GPU_MPI_ISEND,GPU_MPI_WAITALL
+    USE MPI_F08, ONLY: MPI_REQUEST,MPI_COMM_WORLD,MPI_INTEGER,MPI_ALLGATHER,MPI_ALLGATHERV,MPI_ALLTOALL,MPI_ALLTOALLV
+    USE CUDAFOR
+
+    IMPLICIT NONE
+    PRIVATE
+
+    INTEGER, PARAMETER :: HT3D_THREADS=128
+
+    TYPE HT3D_GPU_STATE
+        LOGICAL :: INITIALIZED=.FALSE.
+        LOGICAL :: HAS_HT3D=.FALSE.
+        LOGICAL :: GPU_READY=.TRUE.
+        INTEGER :: N_WALL_TOTAL=0
+        INTEGER :: N_THIN_TOTAL=0
+        INTEGER :: NODE_START=0,NODE_COUNT=0
+        INTEGER :: SCATTER_START=0,SCATTER_COUNT=0
+        INTEGER, ALLOCATABLE :: WALL_BASE_H(:),WALL_NWP_H(:)
+        INTEGER, ALLOCATABLE :: THIN_BASE_H(:),THIN_NWP_H(:)
+    END TYPE HT3D_GPU_STATE
+
+    ! Remote-node indices are exchanged once; temperatures remain on the GPU.
+    TYPE HT3D_REMOTE_EXCHANGE_TYPE
+        INTEGER :: N_SEND=0,N_SLOTS=0
+        REAL(EB), DEVICE, ALLOCATABLE :: SEND_PKG_D(:),RECV_PKG_D(:)
+        INTEGER, ALLOCATABLE :: SLOT_H(:)
+        INTEGER, DEVICE, ALLOCATABLE :: SLOT_D(:),SEND_INDEX_D(:)
+    END TYPE HT3D_REMOTE_EXCHANGE_TYPE
+
+    TYPE(HT3D_GPU_STATE), ALLOCATABLE, SAVE :: STATE(:)
+    LOGICAL, SAVE :: HT3D_INITIALIZED=.FALSE.
+    INTEGER, SAVE :: N_NODE_TOTAL=0,N_NODE_STORAGE_TOTAL=0,N_ALT_TOTAL=0,N_SCATTER_TOTAL=0
+    INTEGER, SAVE :: N_REMOTE_TOTAL=0
+    TYPE(HT3D_REMOTE_EXCHANGE_TYPE), ALLOCATABLE, SAVE :: REMOTE(:)
+    TYPE(MPI_REQUEST), ALLOCATABLE, SAVE :: REMOTE_REQUEST(:)
+
+    INTEGER, ALLOCATABLE, SAVE :: GLOBAL_NODE_COUNTS_H(:),GLOBAL_NODE_OFFSETS_H(:),GLOBAL_NODE_META_H(:)
+    INTEGER, ALLOCATABLE, SAVE :: REMOTE_SOURCE_RANK_H(:),REMOTE_SOURCE_POS_H(:)
+
+    ! A packed wall line includes its boundary nodes.
+    INTEGER, ALLOCATABLE, SAVE :: NODE_MESH_H(:),NODE_WALL_H(:),NODE_INDEX_H(:),NODE_NWP_H(:),NODE_ACTIVE_H(:),NODE_IOR_H(:)
+    INTEGER, ALLOCATABLE, SAVE :: NODE_HT1D_OFFSET_H(:)
+    INTEGER, ALLOCATABLE, SAVE :: NODE_OWNER_MESH_H(:),NODE_CELL_I_H(:),NODE_CELL_J_H(:),NODE_CELL_K_H(:)
+    INTEGER, ALLOCATABLE, SAVE :: NODE_SWEEP_H(:),ALT_OFFSET_H(:),ALT_COUNT_H(:),ALT_NODE_H(:),ALT_IOR_H(:)
+    REAL(EB), ALLOCATABLE, SAVE :: ALT_WEIGHT_H(:)
+
+    ! Device arrays used by the lateral exchange kernel.
+    INTEGER, DEVICE, ALLOCATABLE, SAVE :: NODE_ACTIVE_D(:),NODE_IOR_D(:),NODE_SWEEP_D(:),NODE_INDEX_D(:),NODE_NWP_D(:), &
+                                          NODE_HT1D_OFFSET_D(:), &
+                                          ALT_OFFSET_D(:),ALT_COUNT_D(:),ALT_NODE_D(:),ALT_IOR_D(:)
+    INTEGER, ALLOCATABLE, SAVE :: SCATTER_CELL_I_H(:),SCATTER_CELL_J_H(:),SCATTER_CELL_K_H(:)
+    INTEGER, ALLOCATABLE, SAVE :: SCATTER_NODE_H(:)
+    INTEGER, DEVICE, ALLOCATABLE, SAVE :: SCATTER_CELL_I_D(:),SCATTER_CELL_J_D(:),SCATTER_CELL_K_D(:)
+    INTEGER, DEVICE, ALLOCATABLE, SAVE :: SCATTER_NODE_D(:)
+    REAL(EB), DEVICE, ALLOCATABLE, SAVE :: TMP_D(:),TMP_BEFORE_D(:),DELTA_TMP_D(:),RHO_C_S_D(:),ALT_WEIGHT_D(:)
+
+    PUBLIC HT3D_INIT,HT3D_HAS_MESH,HT3D_PREPARE, &
+           HT3D_EXCHANGE,HT3D_SCATTER
+
+CONTAINS
+
+    LOGICAL FUNCTION HT3D_HAS_MESH(NM)
+        INTEGER, INTENT(IN) :: NM
+        HT3D_HAS_MESH=.FALSE.
+        IF (.NOT.HT3D_INITIALIZED) RETURN
+        IF (NM<1 .OR. NM>SIZE(STATE)) RETURN
+        HT3D_HAS_MESH=STATE(NM)%HAS_HT3D
+    END FUNCTION HT3D_HAS_MESH
+
+
+    SUBROUTINE INIT_REMOTE_METADATA
+        INTEGER :: R,I,IERR,N_TOTAL_GLOBAL
+        INTEGER, ALLOCATABLE :: LOCAL_META(:),COUNTS3(:),DISPLS3(:)
+
+        ! Exchange node locations for links that cross MPI ranks.
+        IF (N_MPI_PROCESSES<=1) THEN
+            ALLOCATE(GLOBAL_NODE_COUNTS_H(0:0),GLOBAL_NODE_OFFSETS_H(0:0),GLOBAL_NODE_META_H(MAX(1,3*N_NODE_TOTAL)))
+            GLOBAL_NODE_COUNTS_H(0)=N_NODE_TOTAL
+            GLOBAL_NODE_OFFSETS_H(0)=0
+            DO I=1,N_NODE_TOTAL
+                GLOBAL_NODE_META_H(3*(I-1)+1)=NODE_MESH_H(I)
+                GLOBAL_NODE_META_H(3*(I-1)+2)=NODE_WALL_H(I)
+                GLOBAL_NODE_META_H(3*(I-1)+3)=NODE_INDEX_H(I)
+            ENDDO
+            RETURN
+        ENDIF
+
+        ALLOCATE(GLOBAL_NODE_COUNTS_H(0:N_MPI_PROCESSES-1),GLOBAL_NODE_OFFSETS_H(0:N_MPI_PROCESSES-1))
+        CALL MPI_ALLGATHER(N_NODE_TOTAL,1,MPI_INTEGER,GLOBAL_NODE_COUNTS_H,1,MPI_INTEGER,MPI_COMM_WORLD,IERR)
+        GLOBAL_NODE_OFFSETS_H(0)=0
+        DO R=1,N_MPI_PROCESSES-1
+            GLOBAL_NODE_OFFSETS_H(R)=GLOBAL_NODE_OFFSETS_H(R-1)+GLOBAL_NODE_COUNTS_H(R-1)
+        ENDDO
+        N_TOTAL_GLOBAL=GLOBAL_NODE_OFFSETS_H(N_MPI_PROCESSES-1)+GLOBAL_NODE_COUNTS_H(N_MPI_PROCESSES-1)
+
+        ALLOCATE(LOCAL_META(MAX(1,3*N_NODE_TOTAL)))
+        LOCAL_META=0
+        DO I=1,N_NODE_TOTAL
+            LOCAL_META(3*(I-1)+1)=NODE_MESH_H(I)
+            LOCAL_META(3*(I-1)+2)=NODE_WALL_H(I)
+            LOCAL_META(3*(I-1)+3)=NODE_INDEX_H(I)
+        ENDDO
+        ALLOCATE(COUNTS3(0:N_MPI_PROCESSES-1),DISPLS3(0:N_MPI_PROCESSES-1))
+        DO R=0,N_MPI_PROCESSES-1
+            COUNTS3(R)=3*GLOBAL_NODE_COUNTS_H(R)
+            DISPLS3(R)=3*GLOBAL_NODE_OFFSETS_H(R)
+        ENDDO
+        ALLOCATE(GLOBAL_NODE_META_H(MAX(1,3*N_TOTAL_GLOBAL)))
+        CALL MPI_ALLGATHERV(LOCAL_META,3*N_NODE_TOTAL,MPI_INTEGER,GLOBAL_NODE_META_H,COUNTS3,DISPLS3, &
+                            MPI_INTEGER,MPI_COMM_WORLD,IERR)
+        DEALLOCATE(LOCAL_META,COUNTS3,DISPLS3)
+    END SUBROUTINE INIT_REMOTE_METADATA
+
+
+    SUBROUTINE HT3D_INIT
+        INTEGER :: NM,IW,I,NWP,N_WALL,ID,ALT_COUNT,ALT_TOTAL,BASE,ITW, &
+                   NM2,IWA,I_NODE,II,ALT_ID,I_CELL,J_CELL,K_CELL,SCATTER_OFFSET
+        INTEGER, ALLOCATABLE :: CELL_TO_NODE(:,:,:)
+        TYPE(WALL_TYPE), POINTER :: WC
+        TYPE(THIN_WALL_TYPE), POINTER :: TW
+        TYPE(SURFACE_TYPE), POINTER :: SF
+        TYPE(BOUNDARY_ONE_D_TYPE), POINTER :: ONE_D
+        TYPE(BOUNDARY_THR_D_TYPE), POINTER :: THR_D
+        TYPE(BOUNDARY_COORD_TYPE), POINTER :: BC
+
+        IF (HT3D_INITIALIZED) RETURN
+
+        ALLOCATE(STATE(NMESHES))
+        N_NODE_TOTAL=0
+        N_REMOTE_TOTAL=0
+        N_ALT_TOTAL=0
+
+        ! Allocate complete wall lines, including referenced boundary nodes.
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_WALL=MESHES(NM)%N_EXTERNAL_WALL_CELLS+MESHES(NM)%N_INTERNAL_WALL_CELLS
+            STATE(NM)%N_WALL_TOTAL=N_WALL
+            STATE(NM)%N_THIN_TOTAL=MESHES(NM)%N_THIN_WALL_CELLS
+            STATE(NM)%NODE_START=N_NODE_TOTAL+1
+            IF (N_WALL>0) THEN
+                ALLOCATE(STATE(NM)%WALL_BASE_H(N_WALL),STATE(NM)%WALL_NWP_H(N_WALL))
+                STATE(NM)%WALL_BASE_H=0
+                STATE(NM)%WALL_NWP_H=0
+            ENDIF
+            IF (STATE(NM)%N_THIN_TOTAL>0) THEN
+                ALLOCATE(STATE(NM)%THIN_BASE_H(STATE(NM)%N_THIN_TOTAL),STATE(NM)%THIN_NWP_H(STATE(NM)%N_THIN_TOTAL))
+                STATE(NM)%THIN_BASE_H=0
+                STATE(NM)%THIN_NWP_H=0
+            ENDIF
+            DO IW=1,N_WALL
+                WC=>MESHES(NM)%WALL(IW)
+                IF (WC%BOUNDARY_TYPE/=SOLID_BOUNDARY) CYCLE
+                IF (WC%SURF_INDEX<1 .OR. WC%SURF_INDEX>SIZE(SURFACE)) CYCLE
+                SF=>SURFACE(WC%SURF_INDEX)
+                IF (SF%THERMAL_BC_INDEX/=THERMALLY_THICK .OR. SF%HT_DIM<=1) CYCLE
+                IF (.NOT.HT1D_GPU_WALL_ACTIVE(NM,IW)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_ONE_D)) CYCLE
+                IF (WC%OD_INDEX<1 .OR. WC%OD_INDEX>SIZE(MESHES(NM)%BOUNDARY_ONE_D)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_THR_D)) CYCLE
+                IF (WC%TD_INDEX<1 .OR. WC%TD_INDEX>SIZE(MESHES(NM)%BOUNDARY_THR_D)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_THR_D(WC%TD_INDEX)%NODE)) CYCLE
+                ONE_D=>MESHES(NM)%BOUNDARY_ONE_D(WC%OD_INDEX)
+                IF (ONE_D%N_LAYERS<1 .OR. .NOT.ALLOCATED(ONE_D%N_LAYER_CELLS)) CYCLE
+                NWP=SUM(ONE_D%N_LAYER_CELLS(1:ONE_D%N_LAYERS))
+                IF (NWP<1) CYCLE
+                STATE(NM)%HAS_HT3D=.TRUE.
+                STATE(NM)%WALL_NWP_H(IW)=NWP
+                STATE(NM)%WALL_BASE_H(IW)=N_NODE_TOTAL+1
+                N_NODE_TOTAL=N_NODE_TOTAL+NWP
+            ENDDO
+            DO ITW=1,STATE(NM)%N_THIN_TOTAL
+                TW=>MESHES(NM)%THIN_WALL(ITW)
+                IF (TW%BOUNDARY_TYPE/=SOLID_BOUNDARY) CYCLE
+                IF (TW%SURF_INDEX<1 .OR. TW%SURF_INDEX>SIZE(SURFACE)) CYCLE
+                SF=>SURFACE(TW%SURF_INDEX)
+                IF (SF%THERMAL_BC_INDEX/=THERMALLY_THICK .OR. SF%HT_DIM<=1) CYCLE
+                IF (.NOT.HT1D_GPU_THIN_WALL_ACTIVE(NM,ITW)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_ONE_D)) CYCLE
+                IF (TW%OD_INDEX<1 .OR. TW%OD_INDEX>SIZE(MESHES(NM)%BOUNDARY_ONE_D)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_THR_D)) CYCLE
+                IF (TW%TD_INDEX<1 .OR. TW%TD_INDEX>SIZE(MESHES(NM)%BOUNDARY_THR_D)) CYCLE
+                IF (.NOT.ALLOCATED(MESHES(NM)%BOUNDARY_THR_D(TW%TD_INDEX)%NODE)) CYCLE
+                ONE_D=>MESHES(NM)%BOUNDARY_ONE_D(TW%OD_INDEX)
+                IF (ONE_D%N_LAYERS<1 .OR. .NOT.ALLOCATED(ONE_D%N_LAYER_CELLS)) CYCLE
+                NWP=SUM(ONE_D%N_LAYER_CELLS(1:ONE_D%N_LAYERS))
+                IF (NWP<1) CYCLE
+                STATE(NM)%THIN_NWP_H(ITW)=NWP
+                STATE(NM)%THIN_BASE_H(ITW)=N_NODE_TOTAL+1
+                STATE(NM)%HAS_HT3D=.TRUE.
+                N_NODE_TOTAL=N_NODE_TOTAL+NWP
+            ENDDO
+            STATE(NM)%NODE_COUNT=N_NODE_TOTAL-STATE(NM)%NODE_START+1
+        ENDDO
+
+        ALLOCATE(NODE_MESH_H(MAX(1,N_NODE_TOTAL)),NODE_WALL_H(MAX(1,N_NODE_TOTAL)), &
+                 NODE_INDEX_H(MAX(1,N_NODE_TOTAL)),NODE_NWP_H(MAX(1,N_NODE_TOTAL)), &
+                 NODE_HT1D_OFFSET_H(MAX(1,N_NODE_TOTAL)),NODE_ACTIVE_H(MAX(1,N_NODE_TOTAL)),NODE_IOR_H(MAX(1,N_NODE_TOTAL)), &
+                 NODE_OWNER_MESH_H(MAX(1,N_NODE_TOTAL)),NODE_CELL_I_H(MAX(1,N_NODE_TOTAL)), &
+                 NODE_CELL_J_H(MAX(1,N_NODE_TOTAL)),NODE_CELL_K_H(MAX(1,N_NODE_TOTAL)), &
+                 NODE_SWEEP_H(MAX(1,N_NODE_TOTAL)))
+        NODE_MESH_H=0; NODE_WALL_H=0; NODE_INDEX_H=0; NODE_NWP_H=0; NODE_HT1D_OFFSET_H=0
+        NODE_ACTIVE_H=0; NODE_IOR_H=0; NODE_SWEEP_H=0
+        NODE_OWNER_MESH_H=0; NODE_CELL_I_H=0; NODE_CELL_J_H=0; NODE_CELL_K_H=0
+
+        ! Fill node metadata and count the alternate links.
+        ID=0
+        ALT_TOTAL=0
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_WALL=STATE(NM)%N_WALL_TOTAL
+            DO IW=1,N_WALL
+                BASE=STATE(NM)%WALL_BASE_H(IW)
+                NWP=STATE(NM)%WALL_NWP_H(IW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                WC=>MESHES(NM)%WALL(IW)
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(WC%TD_INDEX)
+                BC=>MESHES(NM)%BOUNDARY_COORD(WC%BC_INDEX)
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    NODE_MESH_H(ID)=NM
+                    NODE_WALL_H(ID)=IW
+                    NODE_INDEX_H(ID)=I
+                    NODE_NWP_H(ID)=NWP
+                    NODE_IOR_H(ID)=ABS(BC%IOR)
+                    IF (ALLOCATED(GPU_MESHES(NM)%HT1D_WALL_TO_LINE_H) .AND. &
+                        ALLOCATED(GPU_MESHES(NM)%HT1D_NODE_OFFSET_H)) THEN
+                        ALT_ID=GPU_MESHES(NM)%HT1D_WALL_TO_LINE_H(IW)
+                        IF (ALT_ID>0 .AND. ALT_ID<=SIZE(GPU_MESHES(NM)%HT1D_NODE_OFFSET_H)) &
+                            NODE_HT1D_OFFSET_H(ID)=GPU_MESHES(NM)%HT1D_NODE_OFFSET_H(ALT_ID)+I
+                    ENDIF
+                    IF (NODE_HT1D_OFFSET_H(ID)<=0) STATE(NM)%GPU_READY=.FALSE.
+                    IF (ALLOCATED(THR_D%NODE)) THEN
+                        IF (I<=SIZE(THR_D%NODE)) THEN
+                            NODE_ACTIVE_H(ID)=MERGE(1,0,THR_D%NODE(I)%HT3D)
+                            ! The solid cell may belong to a different mesh.
+                            NODE_OWNER_MESH_H(ID)=THR_D%NODE(I)%MESH_NUMBER
+                            NODE_CELL_I_H(ID)=THR_D%NODE(I)%I
+                            NODE_CELL_J_H(ID)=THR_D%NODE(I)%J
+                            NODE_CELL_K_H(ID)=THR_D%NODE(I)%K
+                            IF (THR_D%NODE(I)%HT3D) ALT_TOTAL=ALT_TOTAL+THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                        ENDIF
+                    ENDIF
+                    IF (NODE_OWNER_MESH_H(ID)<=0) NODE_OWNER_MESH_H(ID)=NM
+                ENDDO
+            ENDDO
+            DO ITW=1,STATE(NM)%N_THIN_TOTAL
+                BASE=STATE(NM)%THIN_BASE_H(ITW)
+                NWP=STATE(NM)%THIN_NWP_H(ITW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                TW=>MESHES(NM)%THIN_WALL(ITW)
+                IF (TW%TD_INDEX<1 .OR. TW%TD_INDEX>SIZE(MESHES(NM)%BOUNDARY_THR_D)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(TW%TD_INDEX)
+                IF (.NOT.ALLOCATED(THR_D%NODE)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                BC=>MESHES(NM)%BOUNDARY_COORD(TW%BC_INDEX)
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    NODE_MESH_H(ID)=NM
+                    NODE_WALL_H(ID)=-ITW
+                    NODE_INDEX_H(ID)=I
+                    NODE_NWP_H(ID)=NWP
+                    NODE_IOR_H(ID)=ABS(BC%IOR)
+                    IF (ALLOCATED(GPU_MESHES(NM)%HT1D_THIN_WALL_TO_LINE_H) .AND. &
+                        ALLOCATED(GPU_MESHES(NM)%HT1D_NODE_OFFSET_H)) THEN
+                        ALT_ID=GPU_MESHES(NM)%HT1D_THIN_WALL_TO_LINE_H(ITW)
+                        IF (ALT_ID>0 .AND. ALT_ID<=SIZE(GPU_MESHES(NM)%HT1D_NODE_OFFSET_H)) &
+                            NODE_HT1D_OFFSET_H(ID)=GPU_MESHES(NM)%HT1D_NODE_OFFSET_H(ALT_ID)+I
+                    ENDIF
+                    IF (NODE_HT1D_OFFSET_H(ID)<=0) STATE(NM)%GPU_READY=.FALSE.
+                    IF (I<=SIZE(THR_D%NODE)) THEN
+                        NODE_ACTIVE_H(ID)=MERGE(2,0,THR_D%NODE(I)%HT3D)
+                        NODE_OWNER_MESH_H(ID)=THR_D%NODE(I)%MESH_NUMBER
+                        NODE_CELL_I_H(ID)=THR_D%NODE(I)%I
+                        NODE_CELL_J_H(ID)=THR_D%NODE(I)%J
+                        NODE_CELL_K_H(ID)=THR_D%NODE(I)%K
+                        IF (THR_D%NODE(I)%HT3D) ALT_TOTAL=ALT_TOTAL+THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                    ENDIF
+                    IF (NODE_OWNER_MESH_H(ID)<=0) NODE_OWNER_MESH_H(ID)=NM
+                ENDDO
+            ENDDO
+        ENDDO
+
+        N_ALT_TOTAL=ALT_TOTAL
+        N_NODE_STORAGE_TOTAL=N_NODE_TOTAL
+        ALLOCATE(REMOTE_SOURCE_RANK_H(MAX(1,N_ALT_TOTAL)),REMOTE_SOURCE_POS_H(MAX(1,N_ALT_TOTAL)))
+        REMOTE_SOURCE_RANK_H= -1
+        REMOTE_SOURCE_POS_H = 0
+        CALL INIT_REMOTE_METADATA
+        ALLOCATE(ALT_OFFSET_H(MAX(1,N_NODE_TOTAL)),ALT_COUNT_H(MAX(1,N_NODE_TOTAL)), &
+                 ALT_NODE_H(MAX(1,N_ALT_TOTAL)),ALT_IOR_H(MAX(1,N_ALT_TOTAL)),ALT_WEIGHT_H(MAX(1,N_ALT_TOTAL)))
+        ALT_OFFSET_H=0; ALT_COUNT_H=0; ALT_NODE_H=0; ALT_IOR_H=0; ALT_WEIGHT_H=0._EB
+
+        ! Check and count the alternate-node links.
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_WALL=STATE(NM)%N_WALL_TOTAL
+            DO IW=1,N_WALL
+                BASE=STATE(NM)%WALL_BASE_H(IW)
+                NWP=STATE(NM)%WALL_NWP_H(IW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                WC=>MESHES(NM)%WALL(IW)
+                IF (WC%TD_INDEX<1 .OR. WC%TD_INDEX>SIZE(MESHES(NM)%BOUNDARY_THR_D)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(WC%TD_INDEX)
+                IF (.NOT.ALLOCATED(THR_D%NODE)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    IF (NODE_ACTIVE_H(ID)==0) CYCLE
+                    ALT_OFFSET_H(ID)=N_ALT_TOTAL+1
+                    ALT_COUNT=THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                    ALT_COUNT_H(ID)=ALT_COUNT
+                    IF (ALT_COUNT<=0) CYCLE
+                ENDDO
+            ENDDO
+            DO ITW=1,STATE(NM)%N_THIN_TOTAL
+                BASE=STATE(NM)%THIN_BASE_H(ITW)
+                NWP=STATE(NM)%THIN_NWP_H(ITW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                TW=>MESHES(NM)%THIN_WALL(ITW)
+                IF (TW%TD_INDEX<1 .OR. TW%TD_INDEX>SIZE(MESHES(NM)%BOUNDARY_THR_D)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(TW%TD_INDEX)
+                IF (.NOT.ALLOCATED(THR_D%NODE)) THEN
+                    STATE(NM)%GPU_READY=.FALSE.
+                    CYCLE
+                ENDIF
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    IF (NODE_ACTIVE_H(ID)==0) CYCLE
+                    ALT_OFFSET_H(ID)=N_ALT_TOTAL+1
+                    ALT_COUNT=THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                    ALT_COUNT_H(ID)=ALT_COUNT
+                ENDDO
+            ENDDO
+        ENDDO
+
+        ! Pack alternate-node links in node order.
+        ALT_TOTAL=0
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_WALL=STATE(NM)%N_WALL_TOTAL
+            DO IW=1,N_WALL
+                BASE=STATE(NM)%WALL_BASE_H(IW)
+                NWP=STATE(NM)%WALL_NWP_H(IW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                WC=>MESHES(NM)%WALL(IW)
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(WC%TD_INDEX)
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    IF (NODE_ACTIVE_H(ID)==0) CYCLE
+                    ALT_COUNT=THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                    ALT_OFFSET_H(ID)=ALT_TOTAL+1
+                    ALT_COUNT_H(ID)=ALT_COUNT
+                    DO II=1,ALT_COUNT
+                        ALT_TOTAL=ALT_TOTAL+1
+                        IWA=THR_D%NODE(I)%ALTERNATE_WALL_INDEX(II)
+                        NM2=THR_D%NODE(I)%ALTERNATE_WALL_MESH(II)
+                        I_NODE=THR_D%NODE(I)%ALTERNATE_WALL_NODE(II)
+                        ! Use the cached normal for remote walls.
+                        ALT_IOR_H(ALT_TOTAL)=ABS(THR_D%NODE(I)%ALTERNATE_WALL_IOR(II))
+                        IF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)==0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (ALLOCATED(MESHES(NM2)%WALL) .AND. IWA>=1 .AND. IWA<=SIZE(MESHES(NM2)%WALL)) THEN
+                                IF (MESHES(NM2)%WALL(IWA)%BC_INDEX>=1 .AND. MESHES(NM2)%WALL(IWA)%BC_INDEX<= &
+                                    SIZE(MESHES(NM2)%BOUNDARY_COORD)) &
+                                    ALT_IOR_H(ALT_TOTAL)=ABS(MESHES(NM2)%BOUNDARY_COORD( &
+                                        MESHES(NM2)%WALL(IWA)%BC_INDEX)%IOR)
+                            ENDIF
+                        ELSEIF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)/=0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (ALLOCATED(MESHES(NM2)%THIN_WALL) .AND. IWA>=1 .AND. IWA<=SIZE(MESHES(NM2)%THIN_WALL)) THEN
+                                IF (MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX>=1 .AND. MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX<= &
+                                    SIZE(MESHES(NM2)%BOUNDARY_COORD)) &
+                                    ALT_IOR_H(ALT_TOTAL)=ABS(MESHES(NM2)%BOUNDARY_COORD( &
+                                        MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX)%IOR)
+                            ENDIF
+                        ENDIF
+                        ALT_WEIGHT_H(ALT_TOTAL)=THR_D%NODE(I)%ALTERNATE_WALL_WEIGHT(II)
+                        ALT_ID=0
+                        IF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)==0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (PROCESS(NM2)==MY_RANK .AND. ALLOCATED(STATE(NM2)%WALL_BASE_H)) THEN
+                                IF (IWA>=1 .AND. IWA<=SIZE(STATE(NM2)%WALL_BASE_H)) THEN
+                                    IF (STATE(NM2)%WALL_BASE_H(IWA)>0 .AND. I_NODE>=1 .AND. &
+                                        I_NODE<=STATE(NM2)%WALL_NWP_H(IWA)) THEN
+                                        ALT_ID=STATE(NM2)%WALL_BASE_H(IWA)+I_NODE-1
+                                    ENDIF
+                                ENDIF
+                            ELSEIF (PROCESS(NM2)/=MY_RANK) THEN
+                                ALT_ID=HT3D_REMOTE_NODE_ID(NM2,IWA,I_NODE)
+                            ENDIF
+                        ELSEIF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)/=0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (PROCESS(NM2)==MY_RANK .AND. ALLOCATED(STATE(NM2)%THIN_BASE_H)) THEN
+                                IF (IWA>=1 .AND. IWA<=SIZE(STATE(NM2)%THIN_BASE_H)) THEN
+                                    IF (STATE(NM2)%THIN_BASE_H(IWA)>0 .AND. I_NODE>=1 .AND. &
+                                        I_NODE<=STATE(NM2)%THIN_NWP_H(IWA)) &
+                                        ALT_ID=STATE(NM2)%THIN_BASE_H(IWA)+I_NODE-1
+                                ENDIF
+                            ELSEIF (PROCESS(NM2)/=MY_RANK) THEN
+                                ALT_ID=HT3D_REMOTE_NODE_ID(NM2,-IWA,I_NODE)
+                            ENDIF
+                        ENDIF
+                        ALT_NODE_H(ALT_TOTAL)=ALT_ID
+                        IF (ALT_ID<=0) STATE(NM)%GPU_READY=.FALSE.
+                    ENDDO
+                ENDDO
+            ENDDO
+            DO ITW=1,STATE(NM)%N_THIN_TOTAL
+                BASE=STATE(NM)%THIN_BASE_H(ITW)
+                NWP=STATE(NM)%THIN_NWP_H(ITW)
+                IF (BASE<=0 .OR. NWP<=0) CYCLE
+                TW=>MESHES(NM)%THIN_WALL(ITW)
+                THR_D=>MESHES(NM)%BOUNDARY_THR_D(TW%TD_INDEX)
+                DO I=1,NWP
+                    ID=BASE+I-1
+                    IF (NODE_ACTIVE_H(ID)==0) CYCLE
+                    ALT_COUNT=THR_D%NODE(I)%ALTERNATE_WALL_COUNT
+                    ALT_OFFSET_H(ID)=ALT_TOTAL+1
+                    ALT_COUNT_H(ID)=ALT_COUNT
+                    DO II=1,ALT_COUNT
+                        ALT_TOTAL=ALT_TOTAL+1
+                        IWA=THR_D%NODE(I)%ALTERNATE_WALL_INDEX(II)
+                        NM2=THR_D%NODE(I)%ALTERNATE_WALL_MESH(II)
+                        I_NODE=THR_D%NODE(I)%ALTERNATE_WALL_NODE(II)
+                        ALT_IOR_H(ALT_TOTAL)=ABS(THR_D%NODE(I)%ALTERNATE_WALL_IOR(II))
+                        IF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)==0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (ALLOCATED(MESHES(NM2)%WALL) .AND. IWA>=1 .AND. IWA<=SIZE(MESHES(NM2)%WALL)) THEN
+                                IF (MESHES(NM2)%WALL(IWA)%BC_INDEX>=1 .AND. MESHES(NM2)%WALL(IWA)%BC_INDEX<= &
+                                    SIZE(MESHES(NM2)%BOUNDARY_COORD)) &
+                                    ALT_IOR_H(ALT_TOTAL)=ABS(MESHES(NM2)%BOUNDARY_COORD( &
+                                        MESHES(NM2)%WALL(IWA)%BC_INDEX)%IOR)
+                            ENDIF
+                        ELSEIF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)/=0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (ALLOCATED(MESHES(NM2)%THIN_WALL) .AND. IWA>=1 .AND. IWA<=SIZE(MESHES(NM2)%THIN_WALL)) THEN
+                                IF (MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX>=1 .AND. MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX<= &
+                                    SIZE(MESHES(NM2)%BOUNDARY_COORD)) &
+                                    ALT_IOR_H(ALT_TOTAL)=ABS(MESHES(NM2)%BOUNDARY_COORD( &
+                                        MESHES(NM2)%THIN_WALL(IWA)%BC_INDEX)%IOR)
+                            ENDIF
+                        ENDIF
+                        ALT_WEIGHT_H(ALT_TOTAL)=THR_D%NODE(I)%ALTERNATE_WALL_WEIGHT(II)
+                        ALT_ID=0
+                        IF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)==0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (PROCESS(NM2)==MY_RANK .AND. ALLOCATED(STATE(NM2)%WALL_BASE_H)) THEN
+                                IF (IWA>=1 .AND. IWA<=SIZE(STATE(NM2)%WALL_BASE_H)) THEN
+                                    IF (STATE(NM2)%WALL_BASE_H(IWA)>0 .AND. I_NODE>=1 .AND. &
+                                        I_NODE<=STATE(NM2)%WALL_NWP_H(IWA)) &
+                                        ALT_ID=STATE(NM2)%WALL_BASE_H(IWA)+I_NODE-1
+                                ENDIF
+                            ELSEIF (PROCESS(NM2)/=MY_RANK) THEN
+                                ALT_ID=HT3D_REMOTE_NODE_ID(NM2,IWA,I_NODE)
+                            ENDIF
+                        ELSEIF (THR_D%NODE(I)%ALTERNATE_WALL_TYPE(II)/=0 .AND. NM2>=1 .AND. NM2<=NMESHES) THEN
+                            IF (PROCESS(NM2)==MY_RANK .AND. ALLOCATED(STATE(NM2)%THIN_BASE_H)) THEN
+                                IF (IWA>=1 .AND. IWA<=SIZE(STATE(NM2)%THIN_BASE_H)) THEN
+                                    IF (STATE(NM2)%THIN_BASE_H(IWA)>0 .AND. I_NODE>=1 .AND. &
+                                        I_NODE<=STATE(NM2)%THIN_NWP_H(IWA)) &
+                                        ALT_ID=STATE(NM2)%THIN_BASE_H(IWA)+I_NODE-1
+                                ENDIF
+                            ELSEIF (PROCESS(NM2)/=MY_RANK) THEN
+                                ALT_ID=HT3D_REMOTE_NODE_ID(NM2,-IWA,I_NODE)
+                            ENDIF
+                        ENDIF
+                        ALT_NODE_H(ALT_TOTAL)=ALT_ID
+                        IF (ALT_ID<=0) STATE(NM)%GPU_READY=.FALSE.
+                    ENDDO
+                ENDDO
+            ENDDO
+        ENDDO
+        N_ALT_TOTAL=ALT_TOTAL
+        N_NODE_STORAGE_TOTAL=N_NODE_TOTAL+N_REMOTE_TOTAL
+
+        ! Select one node per solid cell to avoid concurrent writes.
+        N_SCATTER_TOTAL=0
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            STATE(NM)%SCATTER_COUNT=0
+            ALLOCATE(CELL_TO_NODE(0:MESHES(NM)%IBP1,0:MESHES(NM)%JBP1,0:MESHES(NM)%KBP1))
+            CELL_TO_NODE=0
+            ! Select cells belonging to this mesh.
+            DO ID=1,N_NODE_TOTAL
+                IF (NODE_ACTIVE_H(ID)==0 .OR. NODE_OWNER_MESH_H(ID)/=NM) CYCLE
+                I_CELL=NODE_CELL_I_H(ID); J_CELL=NODE_CELL_J_H(ID); K_CELL=NODE_CELL_K_H(ID)
+                IF (I_CELL<0 .OR. I_CELL>MESHES(NM)%IBP1 .OR. J_CELL<0 .OR. J_CELL>MESHES(NM)%JBP1 .OR. &
+                    K_CELL<0 .OR. K_CELL>MESHES(NM)%KBP1) CYCLE
+                IF (CELL_TO_NODE(I_CELL,J_CELL,K_CELL)==0) THEN
+                    CELL_TO_NODE(I_CELL,J_CELL,K_CELL)=ID
+                ELSEIF (NODE_MESH_H(CELL_TO_NODE(I_CELL,J_CELL,K_CELL))/=NM .AND. NODE_MESH_H(ID)==NM) THEN
+                    ! Prefer the local wall line at shared corners.
+                    CELL_TO_NODE(I_CELL,J_CELL,K_CELL)=ID
+                ENDIF
+            ENDDO
+            STATE(NM)%SCATTER_COUNT=COUNT(CELL_TO_NODE>0)
+            STATE(NM)%SCATTER_START=N_SCATTER_TOTAL+1
+            N_SCATTER_TOTAL=N_SCATTER_TOTAL+STATE(NM)%SCATTER_COUNT
+            DEALLOCATE(CELL_TO_NODE)
+        ENDDO
+        ALLOCATE(SCATTER_CELL_I_H(MAX(1,N_SCATTER_TOTAL)),SCATTER_CELL_J_H(MAX(1,N_SCATTER_TOTAL)), &
+                 SCATTER_CELL_K_H(MAX(1,N_SCATTER_TOTAL)),SCATTER_NODE_H(MAX(1,N_SCATTER_TOTAL)))
+        SCATTER_CELL_I_H=0; SCATTER_CELL_J_H=0; SCATTER_CELL_K_H=0; SCATTER_NODE_H=0
+        SCATTER_OFFSET=0
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            ALLOCATE(CELL_TO_NODE(0:MESHES(NM)%IBP1,0:MESHES(NM)%JBP1,0:MESHES(NM)%KBP1))
+            CELL_TO_NODE=0
+            DO ID=1,N_NODE_TOTAL
+                IF (NODE_ACTIVE_H(ID)==0 .OR. NODE_OWNER_MESH_H(ID)/=NM) CYCLE
+                I_CELL=NODE_CELL_I_H(ID); J_CELL=NODE_CELL_J_H(ID); K_CELL=NODE_CELL_K_H(ID)
+                IF (I_CELL<0 .OR. I_CELL>MESHES(NM)%IBP1 .OR. J_CELL<0 .OR. J_CELL>MESHES(NM)%JBP1 .OR. &
+                    K_CELL<0 .OR. K_CELL>MESHES(NM)%KBP1) CYCLE
+                IF (CELL_TO_NODE(I_CELL,J_CELL,K_CELL)==0) THEN
+                    CELL_TO_NODE(I_CELL,J_CELL,K_CELL)=ID
+                ELSEIF (NODE_MESH_H(CELL_TO_NODE(I_CELL,J_CELL,K_CELL))/=NM .AND. NODE_MESH_H(ID)==NM) THEN
+                    CELL_TO_NODE(I_CELL,J_CELL,K_CELL)=ID
+                ENDIF
+            ENDDO
+            DO K_CELL=0,MESHES(NM)%KBP1
+                DO J_CELL=0,MESHES(NM)%JBP1
+                    DO I_CELL=0,MESHES(NM)%IBP1
+                        ID=CELL_TO_NODE(I_CELL,J_CELL,K_CELL)
+                        IF (ID<=0) CYCLE
+                        SCATTER_OFFSET=SCATTER_OFFSET+1
+                        SCATTER_CELL_I_H(SCATTER_OFFSET)=I_CELL
+                        SCATTER_CELL_J_H(SCATTER_OFFSET)=J_CELL
+                        SCATTER_CELL_K_H(SCATTER_OFFSET)=K_CELL
+                        SCATTER_NODE_H(SCATTER_OFFSET)=ID
+                    ENDDO
+                ENDDO
+            ENDDO
+            DEALLOCATE(CELL_TO_NODE)
+        ENDDO
+
+        ALLOCATE(NODE_ACTIVE_D(MAX(1,N_NODE_TOTAL)),NODE_IOR_D(MAX(1,N_NODE_TOTAL)),NODE_SWEEP_D(MAX(1,N_NODE_TOTAL)), &
+                 NODE_INDEX_D(MAX(1,N_NODE_TOTAL)),NODE_NWP_D(MAX(1,N_NODE_TOTAL)), &
+                 NODE_HT1D_OFFSET_D(MAX(1,N_NODE_TOTAL)), &
+                 ALT_OFFSET_D(MAX(1,N_NODE_TOTAL)),ALT_COUNT_D(MAX(1,N_NODE_TOTAL)), &
+                 ALT_NODE_D(MAX(1,N_ALT_TOTAL)),ALT_IOR_D(MAX(1,N_ALT_TOTAL)), &
+                 TMP_D(MAX(1,N_NODE_STORAGE_TOTAL)),TMP_BEFORE_D(MAX(1,N_NODE_STORAGE_TOTAL)), &
+                 DELTA_TMP_D(MAX(1,N_NODE_STORAGE_TOTAL)),RHO_C_S_D(MAX(1,N_NODE_STORAGE_TOTAL)), &
+                 ALT_WEIGHT_D(MAX(1,N_ALT_TOTAL)), &
+                 SCATTER_CELL_I_D(MAX(1,N_SCATTER_TOTAL)),SCATTER_CELL_J_D(MAX(1,N_SCATTER_TOTAL)), &
+                 SCATTER_CELL_K_D(MAX(1,N_SCATTER_TOTAL)),SCATTER_NODE_D(MAX(1,N_SCATTER_TOTAL)))
+
+        NODE_ACTIVE_D=NODE_ACTIVE_H
+        NODE_IOR_D=NODE_IOR_H
+        NODE_INDEX_D=NODE_INDEX_H
+        NODE_NWP_D=NODE_NWP_H
+        NODE_HT1D_OFFSET_D=NODE_HT1D_OFFSET_H
+        ALT_OFFSET_D=ALT_OFFSET_H
+        ALT_COUNT_D=ALT_COUNT_H
+        ALT_NODE_D=ALT_NODE_H
+        ALT_IOR_D=ALT_IOR_H
+        ALT_WEIGHT_D=ALT_WEIGHT_H
+        ! Line values are gathered before each exchange.
+        TMP_D=0._EB
+        DELTA_TMP_D=0._EB
+        RHO_C_S_D=0._EB
+        SCATTER_CELL_I_D=SCATTER_CELL_I_H
+        SCATTER_CELL_J_D=SCATTER_CELL_J_H
+        SCATTER_CELL_K_D=SCATTER_CELL_K_H
+        SCATTER_NODE_D=SCATTER_NODE_H
+        CALL INIT_REMOTE_EXCHANGE
+        HT3D_INITIALIZED=.TRUE.
+
+    END SUBROUTINE HT3D_INIT
+
+
+    INTEGER FUNCTION HT3D_REMOTE_NODE_ID(NM2,IWA,I_NODE)
+        INTEGER, INTENT(IN) :: NM2,IWA,I_NODE
+        INTEGER :: R,LOCAL_ID,GID,BASE_ID
+
+        HT3D_REMOTE_NODE_ID=0
+        IF (NM2<1 .OR. NM2>NMESHES) RETURN
+        R=PROCESS(NM2)
+        IF (R==MY_RANK .OR. R<0 .OR. R>=N_MPI_PROCESSES) RETURN
+        IF (.NOT.ALLOCATED(GLOBAL_NODE_COUNTS_H)) RETURN
+
+        DO LOCAL_ID=1,GLOBAL_NODE_COUNTS_H(R)
+            GID=3*(GLOBAL_NODE_OFFSETS_H(R)+LOCAL_ID-1)+1
+            IF (GLOBAL_NODE_META_H(GID)/=NM2 .OR. GLOBAL_NODE_META_H(GID+1)/=IWA .OR. &
+                GLOBAL_NODE_META_H(GID+2)/=I_NODE) CYCLE
+            DO BASE_ID=1,N_REMOTE_TOTAL
+                IF (REMOTE_SOURCE_RANK_H(BASE_ID)==R .AND. REMOTE_SOURCE_POS_H(BASE_ID)==LOCAL_ID) THEN
+                    HT3D_REMOTE_NODE_ID=N_NODE_TOTAL+BASE_ID
+                    RETURN
+                ENDIF
+            ENDDO
+            N_REMOTE_TOTAL=N_REMOTE_TOTAL+1
+            REMOTE_SOURCE_RANK_H(N_REMOTE_TOTAL)=R
+            REMOTE_SOURCE_POS_H(N_REMOTE_TOTAL)=LOCAL_ID
+            HT3D_REMOTE_NODE_ID=N_NODE_TOTAL+N_REMOTE_TOTAL
+            RETURN
+        ENDDO
+    END FUNCTION HT3D_REMOTE_NODE_ID
+
+
+    SUBROUTINE INIT_REMOTE_EXCHANGE
+        INTEGER :: R,I,IDX,IERR,N_REQ_MAX,N_REQUESTED
+        INTEGER, ALLOCATABLE :: SEND_COUNTS(:),RECV_COUNTS(:),SEND_OFFSETS(:),RECV_OFFSETS(:),REQUESTED(:),INCOMING(:)
+
+        IF (N_MPI_PROCESSES<=1) THEN
+            ALLOCATE(REMOTE(0:0))
+            RETURN
+        ENDIF
+
+        ALLOCATE(REMOTE(0:N_MPI_PROCESSES-1))
+        ALLOCATE(SEND_COUNTS(0:N_MPI_PROCESSES-1),RECV_COUNTS(0:N_MPI_PROCESSES-1), &
+                 SEND_OFFSETS(0:N_MPI_PROCESSES-1),RECV_OFFSETS(0:N_MPI_PROCESSES-1))
+        SEND_COUNTS=0
+        DO I=1,N_REMOTE_TOTAL
+            R=REMOTE_SOURCE_RANK_H(I)
+            IF (R>=0 .AND. R<N_MPI_PROCESSES) SEND_COUNTS(R)=SEND_COUNTS(R)+1
+        ENDDO
+        CALL MPI_ALLTOALL(SEND_COUNTS,1,MPI_INTEGER,RECV_COUNTS,1,MPI_INTEGER,MPI_COMM_WORLD,IERR)
+        SEND_OFFSETS(0)=0; RECV_OFFSETS(0)=0
+        DO R=1,N_MPI_PROCESSES-1
+            SEND_OFFSETS(R)=SEND_OFFSETS(R-1)+SEND_COUNTS(R-1)
+            RECV_OFFSETS(R)=RECV_OFFSETS(R-1)+RECV_COUNTS(R-1)
+        ENDDO
+        ALLOCATE(REQUESTED(MAX(1,N_REMOTE_TOTAL)),INCOMING(MAX(1,SUM(RECV_COUNTS))))
+        REQUESTED=0; INCOMING=0
+
+        N_REQ_MAX=0
+        DO R=0,N_MPI_PROCESSES-1
+            IF (R==MY_RANK) CYCLE
+            REMOTE(R)%N_SLOTS=SEND_COUNTS(R)
+            REMOTE(R)%N_SEND=RECV_COUNTS(R)
+            IF (REMOTE(R)%N_SLOTS>0) THEN
+                ALLOCATE(REMOTE(R)%SLOT_H(REMOTE(R)%N_SLOTS),REMOTE(R)%SLOT_D(REMOTE(R)%N_SLOTS))
+                IDX=0
+                DO I=1,N_REMOTE_TOTAL
+                    IF (REMOTE_SOURCE_RANK_H(I)/=R) CYCLE
+                    IDX=IDX+1
+                    REMOTE(R)%SLOT_H(IDX)=N_NODE_TOTAL+I
+                    REQUESTED(SEND_OFFSETS(R)+IDX)=REMOTE_SOURCE_POS_H(I)
+                ENDDO
+                REMOTE(R)%SLOT_D=REMOTE(R)%SLOT_H
+                ALLOCATE(REMOTE(R)%RECV_PKG_D(3*REMOTE(R)%N_SLOTS))
+                N_REQ_MAX=N_REQ_MAX+1
+            ENDIF
+            IF (REMOTE(R)%N_SEND>0) THEN
+                ALLOCATE(REMOTE(R)%SEND_INDEX_D(REMOTE(R)%N_SEND),REMOTE(R)%SEND_PKG_D(3*REMOTE(R)%N_SEND))
+                N_REQ_MAX=N_REQ_MAX+1
+            ENDIF
+        ENDDO
+        CALL MPI_ALLTOALLV(REQUESTED,SEND_COUNTS,SEND_OFFSETS,MPI_INTEGER,INCOMING,RECV_COUNTS,RECV_OFFSETS, &
+                           MPI_INTEGER,MPI_COMM_WORLD,IERR)
+        DO R=0,N_MPI_PROCESSES-1
+            N_REQUESTED=REMOTE(R)%N_SEND
+            IF (N_REQUESTED<=0) CYCLE
+            IF (ANY(INCOMING(RECV_OFFSETS(R)+1:RECV_OFFSETS(R)+N_REQUESTED)<1) .OR. &
+                ANY(INCOMING(RECV_OFFSETS(R)+1:RECV_OFFSETS(R)+N_REQUESTED)>N_NODE_TOTAL)) &
+                ERROR STOP 'HT3D invalid remote node request'
+            REMOTE(R)%SEND_INDEX_D=INCOMING(RECV_OFFSETS(R)+1:RECV_OFFSETS(R)+N_REQUESTED)
+        ENDDO
+        IF (N_REQ_MAX>0) ALLOCATE(REMOTE_REQUEST(N_REQ_MAX))
+        DEALLOCATE(SEND_COUNTS,RECV_COUNTS,SEND_OFFSETS,RECV_OFFSETS,REQUESTED,INCOMING)
+    END SUBROUTINE INIT_REMOTE_EXCHANGE
+
+
+    SUBROUTINE EXCHANGE_REMOTE_STATE
+        INTEGER, PARAMETER :: HT3D_MPI_TAG_BASE=23000
+        INTEGER :: R,N_REQ,GRDD
+        INTEGER(KIND=cuda_stream_kind) :: EXCHANGE_STREAM
+
+        IF (N_MPI_PROCESSES<=1 .OR. .NOT.ALLOCATED(REMOTE)) RETURN
+        IF (N_NODE_TOTAL<=0 .AND. N_REMOTE_TOTAL<=0) RETURN
+
+        ! Complete GPU gathers before MPI accesses the device buffers.
+        CALL GPU_WAIT_ALL
+        N_REQ=0
+
+        ! Post receives before sends.
+        DO R=0,N_MPI_PROCESSES-1
+            IF (R==MY_RANK) CYCLE
+            IF (.NOT.ALLOCATED(REMOTE(R)%RECV_PKG_D)) CYCLE
+            N_REQ=N_REQ+1
+            CALL GPU_MPI_IRECV(REMOTE(R)%RECV_PKG_D,SIZE(REMOTE(R)%RECV_PKG_D),R, &
+                HT3D_MPI_TAG_BASE,REMOTE_REQUEST(N_REQ))
+        ENDDO
+
+        DO R=0,N_MPI_PROCESSES-1
+            IF (R==MY_RANK .OR. .NOT.ALLOCATED(REMOTE(R)%SEND_PKG_D)) CYCLE
+            GRDD=(REMOTE(R)%N_SEND+HT3D_THREADS-1)/HT3D_THREADS
+            CALL PACK_REMOTE_GPU<<<GRDD,HT3D_THREADS,0,GPU_MESHES(LOWER_MESH_INDEX)%STRM>>>( &
+                REMOTE(R)%N_SEND,REMOTE(R)%SEND_INDEX_D,TMP_D,DELTA_TMP_D,RHO_C_S_D,REMOTE(R)%SEND_PKG_D)
+        ENDDO
+        CALL GPU_WAIT_ALL
+
+        DO R=0,N_MPI_PROCESSES-1
+            IF (R==MY_RANK .OR. .NOT.ALLOCATED(REMOTE(R)%SEND_PKG_D)) CYCLE
+            N_REQ=N_REQ+1
+            CALL GPU_MPI_ISEND(REMOTE(R)%SEND_PKG_D,SIZE(REMOTE(R)%SEND_PKG_D),R, &
+                HT3D_MPI_TAG_BASE,REMOTE_REQUEST(N_REQ))
+        ENDDO
+        IF (N_REQ>0) CALL GPU_MPI_WAITALL(REMOTE_REQUEST(1:N_REQ))
+
+        EXCHANGE_STREAM=GPU_MESHES(LOWER_MESH_INDEX)%STRM
+        DO R=0,N_MPI_PROCESSES-1
+            IF (R==MY_RANK .OR. .NOT.ALLOCATED(REMOTE(R)%RECV_PKG_D)) CYCLE
+            GRDD=(REMOTE(R)%N_SLOTS+HT3D_THREADS-1)/HT3D_THREADS
+            CALL UNPACK_REMOTE_GPU<<<GRDD,HT3D_THREADS,0,EXCHANGE_STREAM>>>(REMOTE(R)%N_SLOTS, &
+                REMOTE(R)%SLOT_D,N_NODE_STORAGE_TOTAL,REMOTE(R)%RECV_PKG_D, &
+                TMP_D,DELTA_TMP_D,RHO_C_S_D)
+        ENDDO
+    END SUBROUTINE EXCHANGE_REMOTE_STATE
+
+
+    SUBROUTINE HT3D_PREPARE(NM)
+        INTEGER, INTENT(IN) :: NM
+
+        IF (.NOT.HT3D_INITIALIZED) RETURN
+        IF (NM<1 .OR. NM>SIZE(STATE)) RETURN
+
+        ! Rotate the sweep direction as in the CPU wall solver.
+        MESHES(NM)%HT_3D_SWEEP_DIRECTION=MESHES(NM)%HT_3D_SWEEP_DIRECTION+1
+        IF (MESHES(NM)%HT_3D_SWEEP_DIRECTION>3) MESHES(NM)%HT_3D_SWEEP_DIRECTION=1
+    END SUBROUTINE HT3D_PREPARE
+
+
+    SUBROUTINE HT3D_EXCHANGE
+        INTEGER :: NM,THREADS,GRDD,N_LOCAL
+
+        IF (.NOT.HT3D_INITIALIZED) RETURN
+        IF (N_NODE_TOTAL<=0) RETURN
+
+        IF (.NOT.ALL(STATE(LOWER_MESH_INDEX:UPPER_MESH_INDEX)%GPU_READY)) THEN
+            ERROR STOP 'HT3D GPU graph contains a non-local or unsupported alternate-wall link'
+        ENDIF
+
+        THREADS=HT3D_THREADS
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_LOCAL=STATE(NM)%NODE_COUNT
+            IF (N_LOCAL<=0) CYCLE
+            CALL GATHER_LINES_GPU<<<(N_LOCAL+THREADS-1)/THREADS,THREADS,0,GPU_MESHES(NM)%STRM>>>( &
+                STATE(NM)%NODE_START,N_LOCAL,NODE_HT1D_OFFSET_D,NODE_SWEEP_D,GPU_MESHES(NM)%HT1D_TMP_D, &
+                GPU_MESHES(NM)%HT1D_DELTA_TMP_D,GPU_MESHES(NM)%HT1D_RHO_C_S_D,TMP_D,DELTA_TMP_D,RHO_C_S_D, &
+                MESHES(NM)%HT_3D_SWEEP_DIRECTION)
+            CALL GPU_WAIT(GPU_MESHES(NM)%STRM)
+        ENDDO
+
+        CALL EXCHANGE_REMOTE_STATE
+
+        CALL COPY_TEMPERATURE_GPU<<<(N_NODE_TOTAL+THREADS-1)/THREADS,THREADS,0, &
+            GPU_MESHES(LOWER_MESH_INDEX)%STRM>>>(N_NODE_TOTAL,TMP_D,TMP_BEFORE_D)
+        GRDD=(N_NODE_TOTAL+THREADS-1)/THREADS
+        CALL LATERAL_EXCHANGE_GPU<<<GRDD,THREADS,0,GPU_MESHES(LOWER_MESH_INDEX)%STRM>>>(N_NODE_TOTAL, &
+            NODE_ACTIVE_D,NODE_IOR_D,NODE_SWEEP_D,TMP_D,DELTA_TMP_D,RHO_C_S_D,ALT_OFFSET_D,ALT_COUNT_D,ALT_NODE_D,ALT_IOR_D,ALT_WEIGHT_D)
+        CALL GPU_WAIT(GPU_MESHES(LOWER_MESH_INDEX)%STRM)
+
+        ! Return temperatures to the solid lines and their ghost nodes.
+        DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+            N_LOCAL=STATE(NM)%NODE_COUNT
+            IF (N_LOCAL<=0) CYCLE
+            CALL RETURN_LINES_GPU<<<(N_LOCAL+THREADS-1)/THREADS,THREADS,0,GPU_MESHES(NM)%STRM>>>( &
+                STATE(NM)%NODE_START,N_LOCAL,NODE_ACTIVE_D,NODE_IOR_D,NODE_INDEX_D,NODE_NWP_D, &
+                NODE_HT1D_OFFSET_D,NODE_SWEEP_D,TMP_D,TMP_BEFORE_D,GPU_MESHES(NM)%HT1D_TMP_D)
+            CALL GPU_WAIT(GPU_MESHES(NM)%STRM)
+        ENDDO
+
+    END SUBROUTINE HT3D_EXCHANGE
+
+
+    SUBROUTINE HT3D_SCATTER(NM)
+        INTEGER, INTENT(IN) :: NM
+        INTEGER :: THREADS,GRDD,SCATTER_START,SCATTER_COUNT
+
+        IF (.NOT.HT3D_INITIALIZED) RETURN
+        IF (NM<1 .OR. NM>SIZE(STATE)) RETURN
+        ! Copy solid temperatures to the mesh using the unique-cell map.
+        SCATTER_START=STATE(NM)%SCATTER_START
+        SCATTER_COUNT=STATE(NM)%SCATTER_COUNT
+        IF (SCATTER_COUNT<=0) RETURN
+        THREADS=HT3D_THREADS
+        GRDD=(SCATTER_COUNT+THREADS-1)/THREADS
+        CALL SCATTER_TEMPERATURE_GPU<<<GRDD,THREADS,0,GPU_MESHES(NM)%STRM>>>(SCATTER_COUNT,SCATTER_START, &
+            MESHES(NM)%IBP1,MESHES(NM)%JBP1,SCATTER_CELL_I_D,SCATTER_CELL_J_D,SCATTER_CELL_K_D, &
+            SCATTER_NODE_D,TMP_D,GPU_MESHES(NM)%TMPD)
+        CALL GPU_WAIT(GPU_MESHES(NM)%STRM)
+    END SUBROUTINE HT3D_SCATTER
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE PACK_REMOTE_GPU(N_NODE,SOURCE_INDEX,TMP,DELTA_TMP,RHO_C_S,PACKAGE)
+        INTEGER, VALUE :: N_NODE
+        INTEGER, DEVICE :: SOURCE_INDEX(*)
+        REAL(EB), DEVICE :: TMP(*),DELTA_TMP(*),RHO_C_S(*),PACKAGE(*)
+        INTEGER :: ID,SOURCE
+
+        ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (ID<1 .OR. ID>N_NODE) RETURN
+        SOURCE=SOURCE_INDEX(ID)
+        PACKAGE(ID)=TMP(SOURCE)
+        PACKAGE(N_NODE+ID)=DELTA_TMP(SOURCE)
+        PACKAGE(2*N_NODE+ID)=RHO_C_S(SOURCE)
+    END SUBROUTINE PACK_REMOTE_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE UNPACK_REMOTE_GPU(N_SLOTS,SLOT_D,N_STORAGE,PACKAGE, &
+                                                                TMP,DELTA_TMP,RHO_C_S)
+        INTEGER, VALUE :: N_SLOTS,N_STORAGE
+        INTEGER, DEVICE :: SLOT_D(*)
+        REAL(EB), DEVICE :: PACKAGE(*),TMP(*),DELTA_TMP(*),RHO_C_S(*)
+        INTEGER :: ID,SLOT
+
+        ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (ID<1 .OR. ID>N_SLOTS) RETURN
+        SLOT=SLOT_D(ID)
+        IF (SLOT<1 .OR. SLOT>N_STORAGE) RETURN
+        TMP(SLOT)=PACKAGE(ID)
+        DELTA_TMP(SLOT)=PACKAGE(N_SLOTS+ID)
+        RHO_C_S(SLOT)=PACKAGE(2*N_SLOTS+ID)
+    END SUBROUTINE UNPACK_REMOTE_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE GATHER_LINES_GPU(NODE_START,N_LOCAL,NODE_HT1D_OFFSET,NODE_SWEEP, &
+        HT1D_TMP,HT1D_DELTA_TMP,HT1D_RHO_C_S,TMP,DELTA_TMP,RHO_C_S,SWEEP_DIRECTION)
+        INTEGER, VALUE :: NODE_START,N_LOCAL,SWEEP_DIRECTION
+        INTEGER, DEVICE :: NODE_HT1D_OFFSET(*),NODE_SWEEP(*)
+        REAL(EB), DEVICE :: HT1D_TMP(*),HT1D_DELTA_TMP(*),HT1D_RHO_C_S(*),TMP(*),DELTA_TMP(*),RHO_C_S(*)
+        INTEGER :: LOCAL_ID,NODE_ID,LINE_NODE_ID
+
+        LOCAL_ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (LOCAL_ID<1 .OR. LOCAL_ID>N_LOCAL) RETURN
+        NODE_ID=NODE_START+LOCAL_ID-1
+        LINE_NODE_ID=NODE_HT1D_OFFSET(NODE_ID)
+        TMP(NODE_ID)=HT1D_TMP(LINE_NODE_ID)
+        DELTA_TMP(NODE_ID)=HT1D_DELTA_TMP(LINE_NODE_ID)
+        RHO_C_S(NODE_ID)=HT1D_RHO_C_S(LINE_NODE_ID)
+        NODE_SWEEP(NODE_ID)=SWEEP_DIRECTION
+    END SUBROUTINE GATHER_LINES_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE COPY_TEMPERATURE_GPU(N_NODE,TMP,TMP_BEFORE)
+        INTEGER, VALUE :: N_NODE
+        REAL(EB), DEVICE :: TMP(*),TMP_BEFORE(*)
+        INTEGER :: ID
+
+        ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (ID<1 .OR. ID>N_NODE) RETURN
+        TMP_BEFORE(ID)=TMP(ID)
+    END SUBROUTINE COPY_TEMPERATURE_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE RETURN_LINES_GPU(NODE_START,N_LOCAL,NODE_ACTIVE,NODE_IOR,NODE_INDEX,NODE_NWP, &
+        NODE_HT1D_OFFSET,NODE_SWEEP,TMP,TMP_BEFORE,HT1D_TMP)
+        INTEGER, VALUE :: NODE_START,N_LOCAL
+        INTEGER, DEVICE :: NODE_ACTIVE(*),NODE_IOR(*),NODE_INDEX(*),NODE_NWP(*),NODE_HT1D_OFFSET(*),NODE_SWEEP(*)
+        REAL(EB), DEVICE :: TMP(*),TMP_BEFORE(*),HT1D_TMP(*)
+        INTEGER :: LOCAL_ID,NODE_ID,LINE_NODE_ID,NODE_INDEX_IN_LINE,NWP
+        REAL(EB) :: DELTA_T
+
+        LOCAL_ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (LOCAL_ID<1 .OR. LOCAL_ID>N_LOCAL) RETURN
+        NODE_ID=NODE_START+LOCAL_ID-1
+        IF (NODE_ACTIVE(NODE_ID)==0) RETURN
+        LINE_NODE_ID=NODE_HT1D_OFFSET(NODE_ID)
+        HT1D_TMP(LINE_NODE_ID)=TMP(NODE_ID)
+        IF (NODE_IOR(NODE_ID)==NODE_SWEEP(NODE_ID)) RETURN
+        NODE_INDEX_IN_LINE=NODE_INDEX(NODE_ID)
+        NWP=NODE_NWP(NODE_ID)
+        DELTA_T=TMP(NODE_ID)-TMP_BEFORE(NODE_ID)
+        IF (NODE_INDEX_IN_LINE==1) HT1D_TMP(LINE_NODE_ID-1)=HT1D_TMP(LINE_NODE_ID-1)+DELTA_T
+        IF (NODE_INDEX_IN_LINE==NWP) HT1D_TMP(LINE_NODE_ID+1)=HT1D_TMP(LINE_NODE_ID+1)+DELTA_T
+    END SUBROUTINE RETURN_LINES_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE LATERAL_EXCHANGE_GPU(N_NODE,NODE_ACTIVE,NODE_IOR,NODE_SWEEP,TMP,DELTA_TMP,RHO_C_S, &
+                                                             ALT_OFFSET,ALT_COUNT,ALT_NODE,ALT_IOR,ALT_WEIGHT)
+        INTEGER, VALUE :: N_NODE
+        INTEGER, DEVICE :: NODE_ACTIVE(*),NODE_IOR(*),NODE_SWEEP(*),ALT_OFFSET(*),ALT_COUNT(*),ALT_NODE(*),ALT_IOR(*)
+        REAL(EB), DEVICE :: TMP(*),DELTA_TMP(*),RHO_C_S(*),ALT_WEIGHT(*)
+        INTEGER :: ID,II,POS,ALT_ID,SWEEP
+        REAL(EB) :: RHOC,NUMER
+
+        ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (ID<1 .OR. ID>N_NODE .OR. NODE_ACTIVE(ID)==0) RETURN
+        IF (ALT_COUNT(ID)<=0) RETURN
+        SWEEP=NODE_SWEEP(ID)
+        ! Skip lines normal to the active sweep, as in the CPU solver.
+        IF (NODE_IOR(ID)==SWEEP) RETURN
+        IF (NODE_ACTIVE(ID)==2) THEN
+            ! Thin-wall nodes use the direct weighted temperature increment.
+            DO II=1,ALT_COUNT(ID)
+                POS=ALT_OFFSET(ID)+II-1
+                IF (ALT_NODE(POS)<=0 .OR. ABS(ALT_IOR(POS))/=SWEEP) CYCLE
+                ALT_ID=ALT_NODE(POS)
+                TMP(ID)=TMP(ID)+ALT_WEIGHT(POS)*DELTA_TMP(ALT_ID)
+            ENDDO
+        ELSE
+            RHOC=RHO_C_S(ID)
+            IF (RHOC<=TWO_EPSILON_EB) RETURN
+            NUMER=RHOC*TMP(ID)
+            DO II=1,ALT_COUNT(ID)
+                POS=ALT_OFFSET(ID)+II-1
+                IF (ALT_NODE(POS)<=0 .OR. ABS(ALT_IOR(POS))/=SWEEP) CYCLE
+                ALT_ID=ALT_NODE(POS)
+                NUMER=NUMER+ALT_WEIGHT(POS)*RHO_C_S(ALT_ID)*DELTA_TMP(ALT_ID)
+            ENDDO
+            TMP(ID)=NUMER/RHOC
+        ENDIF
+    END SUBROUTINE LATERAL_EXCHANGE_GPU
+
+
+    ATTRIBUTES(GLOBAL) SUBROUTINE SCATTER_TEMPERATURE_GPU(N_SCATTER,SCATTER_START,IBP1_IN,JBP1_IN, &
+                                                                      SCATTER_CELL_I,SCATTER_CELL_J,SCATTER_CELL_K, &
+                                                                      SCATTER_NODE,TMP_NODE,TMP_MESH)
+        INTEGER, VALUE :: N_SCATTER,SCATTER_START,IBP1_IN,JBP1_IN
+        INTEGER, DEVICE :: SCATTER_CELL_I(*),SCATTER_CELL_J(*),SCATTER_CELL_K(*),SCATTER_NODE(*)
+        REAL(EB), DEVICE :: TMP_NODE(*)
+        REAL(EB), DEVICE :: TMP_MESH(0:IBP1_IN,0:JBP1_IN,0:*)
+        INTEGER :: ID,POS,NODE_ID
+
+        ID=(BLOCKIDX%X-1)*BLOCKDIM%X+THREADIDX%X
+        IF (ID<1 .OR. ID>N_SCATTER) RETURN
+        POS=SCATTER_START+ID-1
+        NODE_ID=SCATTER_NODE(POS)
+        TMP_MESH(SCATTER_CELL_I(POS),SCATTER_CELL_J(POS),SCATTER_CELL_K(POS))=TMP_NODE(NODE_ID)
+    END SUBROUTINE SCATTER_TEMPERATURE_GPU
+
+END MODULE HT3D_GPU

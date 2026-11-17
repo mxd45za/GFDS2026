@@ -55,6 +55,7 @@ set(FDS_SOURCES
   ${SRC_DIR}/g_erro.f90
   ${SRC_DIR}/g_mesh.f90
   ${SRC_DIR}/g_ht1d.f90
+  ${SRC_DIR}/ht3d.f90
   ${SRC_DIR}/g_dump.f90
   ${SRC_DIR}/g_init.f90
   ${SRC_DIR}/g_func.f90

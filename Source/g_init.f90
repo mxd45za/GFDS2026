@@ -241,7 +241,8 @@ MODULE G_INIT
             IMPLICIT NONE
 
             INTEGER, INTENT(IN) :: NM
-            INTEGER :: NOM,I1,I2,J1,J2,K1,K2,N_ACTIVE,IJK_SIZE_S,IJK_SIZE_R,N_SEND,N_RECV
+            INTEGER :: NOM,I1,I2,J1,J2,K1,K2,N_ACTIVE,IJK_SIZE_S,IJK_SIZE_R,N_SEND,N_RECV, &
+                       N_WALL_SEND,N_THIN_SEND,N_WALL_RECV,N_THIN_RECV
             TYPE(OMESH_TYPE), POINTER :: CPU_OM
             TYPE(GPU_OMESH_TYPE), POINTER :: GOM_LOCAL
 
@@ -276,18 +277,25 @@ MODULE G_INIT
                 GOM_LOCAL%K_MAX_S = CPU_OM%K_MAX_S
                 GOM_LOCAL%NIC_S = CPU_OM%NIC_S
 
-                ! WALL back-side requests already have a stable ordering from
-                ! INITIALIZE_BACK_WALL_EXCHANGE. Mirror only that ordering and
-                ! the five values needed by the GPU HT1D boundary solve.
-                N_SEND = CPU_OM%WALL_SEND_BUFFER%N_ITEMS
-                N_RECV = CPU_OM%WALL_RECV_BUFFER%N_ITEMS
+                ! Keep ordinary WALL and THIN_WALL requests in one list. A
+                ! positive entry is a WALL index; a negative entry is a
+                ! THIN_WALL index.
+                N_WALL_SEND = CPU_OM%WALL_SEND_BUFFER%N_ITEMS
+                N_THIN_SEND = CPU_OM%THIN_WALL_SEND_BUFFER%N_ITEMS
+                N_WALL_RECV = CPU_OM%WALL_RECV_BUFFER%N_ITEMS
+                N_THIN_RECV = CPU_OM%THIN_WALL_RECV_BUFFER%N_ITEMS
+                N_SEND = N_WALL_SEND + N_THIN_SEND
+                N_RECV = N_WALL_RECV + N_THIN_RECV
                 GOM_LOCAL%HT1D_N_SEND = N_SEND
                 GOM_LOCAL%HT1D_N_RECV = N_RECV
                 IF (PROCESS(NM)/=PROCESS(NOM)) THEN
                     IF (N_SEND>0) THEN
                         ALLOCATE(GOM_LOCAL%HT1D_WALL_INDEX_S_D(1:N_SEND))
                         ALLOCATE(GOM_LOCAL%HT1D_SEND_PKG_D(HT1D_BACKSIDE_FIELD_COUNT*N_SEND))
-                        GOM_LOCAL%HT1D_WALL_INDEX_S_D = CPU_OM%WALL_SEND_BUFFER%ITEM_INDEX(1:N_SEND)
+                        IF (N_WALL_SEND>0) GOM_LOCAL%HT1D_WALL_INDEX_S_D(1:N_WALL_SEND) = &
+                            CPU_OM%WALL_SEND_BUFFER%ITEM_INDEX(1:N_WALL_SEND)
+                        IF (N_THIN_SEND>0) GOM_LOCAL%HT1D_WALL_INDEX_S_D(N_WALL_SEND+1:N_SEND) = -&
+                            CPU_OM%THIN_WALL_SEND_BUFFER%ITEM_INDEX(1:N_THIN_SEND)
                     ENDIF
                     IF (N_RECV>0) THEN
                         ALLOCATE(GOM_LOCAL%HT1D_RECV_PKG_D(HT1D_BACKSIDE_FIELD_COUNT*N_RECV))
