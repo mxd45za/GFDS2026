@@ -34,6 +34,29 @@ MODULE G_INIT
             ENDDO
         END SUBROUTINE CHECK_GPU_WALL_SETUP
 
+        SUBROUTINE CHECK_GPU_OBST_SETUP
+            INTEGER :: NM,N
+            TYPE(OBSTRUCTION_TYPE), POINTER :: OB
+
+            DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+                DO N=1,MESHES(NM)%N_OBST
+                    OB => MESHES(NM)%OBSTRUCTION(N)
+                    IF (.NOT.OB%REMOVABLE .AND. .NOT.OB%CONSUMABLE .AND. OB%CTRL_INDEX<=0 .AND. OB%DEVC_INDEX<=0) CYCLE
+                    IF (OB%CONSUMABLE) THEN
+                        WRITE(LU_ERR,'(A,I0,A,A)') 'ERROR: GPU dynamic OBST, mesh ',NM,', ID=',TRIM(OB%ID)
+                        ERROR STOP 'GPU consumable OBST is not supported; use --c/--gc'
+                    ENDIF
+                    IF (NMESHES/=1 .OR. OB%THIN .OR. OB%HOLE_FILLER .OR. &
+                        OB%I1<=0 .OR. OB%I2>=MESHES(NM)%IBAR .OR. OB%J1<=0 .OR. OB%J2>=MESHES(NM)%JBAR .OR. &
+                        OB%K1<=0 .OR. OB%K2>=MESHES(NM)%KBAR .OR. ANY(OB%SURF_INDEX/=DEFAULT_SURF_INDEX) .OR. &
+                        (OB%SURF_INDEX_INTERIOR/=0 .AND. OB%SURF_INDEX_INTERIOR/=DEFAULT_SURF_INDEX)) THEN
+                        WRITE(LU_ERR,'(A,I0,A,A)') 'ERROR: GPU dynamic OBST, mesh ',NM,', ID=',TRIM(OB%ID)
+                        ERROR STOP 'GPU supports only interior, default-surface dynamic OBST on one mesh; use --c/--gc'
+                    ENDIF
+                ENDDO
+            ENDDO
+        END SUBROUTINE CHECK_GPU_OBST_SETUP
+
         SUBROUTINE CHECK_GPU_RAMP_SETUP
             INTEGER :: IS,N
 
@@ -593,6 +616,8 @@ MODULE G_INIT
             ALLOCATE(GM%W_GHOSTD(1:N_EXTERNAL_WALL_CELLS))
             ALLOCATE(GM%UVW_SAVED(1:N_EXTERNAL_WALL_CELLS))
             ALLOCATE(GM%WALL_BOUNDARY_TYPE_PREVIOUSD(GPU_WALL_LB:GPU_WALL_UB))
+            ALLOCATE(GM%WALL_BTYPE_PREV_H(GPU_WALL_LB:GPU_WALL_UB))
+            ALLOCATE(GM%WALL_SF_PREV_H(GPU_WALL_LB:GPU_WALL_UB))
             ALLOCATE(GM%EXTERNAL_WALL_NOMD(1:N_EXTERNAL_WALL_CELLS))
             ALLOCATE(GM%EXTERNAL_WALL_NICD(1:N_EXTERNAL_WALL_CELLS))
             ALLOCATE(GM%WALL_IIO(1:N_EXTERNAL_WALL_CELLS))
@@ -655,6 +680,7 @@ MODULE G_INIT
 
             ALLOCATE(GM%CELL_SOLID(GPU_CELL_LB:GPU_CELL_UB))
             ALLOCATE(GM%CELL_EXTERIOR(GPU_CELL_LB:GPU_CELL_UB))
+            ALLOCATE(GM%CELL_SOLID_PREV_H(GPU_CELL_LB:GPU_CELL_UB))
             ALLOCATE(GM%INTERPOLATED_MESHD(1:IBAR,1:JBAR,1:KBAR))
             ALLOCATE(GM%CELL_WALL_INDEX(GPU_CELL_LB:GPU_CELL_UB,-3:3))
             ALLOCATE(GM%CELL_EDGE_INDEX(GPU_CELL_LB:GPU_CELL_UB,1:12))
@@ -738,6 +764,7 @@ MODULE G_INIT
             ENDDO
             CELL_SOLID      = CELL_SOLID_H
             CELL_EXTERIOR   = CELL_EXTERIOR_H
+            GM%CELL_SOLID_PREV_H = CELL_SOLID_H
             GM%INTERPOLATED_MESHD = INTERPOLATED_MESH
             CELL_I = CELL_I_H
             CELL_J = CELL_J_H
@@ -1130,6 +1157,8 @@ MODULE G_INIT
 
             WALL_SF_INDEX       = WALL_SF_INDEX_H
             WALL_TOPO_AOS       = WALL_TOPO_AOS_H
+            GM%WALL_BTYPE_PREV_H = WALL_BOUNDARY_TYPE_H
+            GM%WALL_SF_PREV_H = WALL_SF_INDEX_H
             WALL_HEAT_TRANS_COEF= WALL_HEAT_TRANS_COEF_H
             WALL_Q_CON_F        = WALL_Q_CON_F_H
             WALL_K_G            = WALL_K_G_H

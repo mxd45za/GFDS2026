@@ -68,6 +68,7 @@ set(FDS_SOURCES
   ${SRC_DIR}/g_pres.f90
   ${SRC_DIR}/g_velo.f90
   ${SRC_DIR}/g_radi.f90
+  ${SRC_DIR}/g_ctrl.f90
   ${SRC_DIR}/g_tools.f90
   ${SRC_DIR}/main.f90
 )
