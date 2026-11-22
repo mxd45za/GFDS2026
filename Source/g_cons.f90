@@ -16,9 +16,12 @@ MODULE G_CONS
     INTEGER :: GPU_STAGE_MODE=GPU_STAGE_DEFAULT
     CHARACTER(64) :: GPU_TEST_MODULE=''
 
+    ! GPUON selects the G time-loop orchestration; GPU_DEVICE_ON selects CUDA execution.
+    ! --gc uses the G loop with CPU kernels and must not touch CUDA state.
+    LOGICAL :: GPUON=.TRUE.,GPU_DEVICE_ON=.TRUE.
     ! Host staging is enabled by the --gt test mode.
-    LOGICAL :: GPUON=.TRUE.,GPU_DEBUG_H2D_D2H=.FALSE.,GPU_IO_ON=.TRUE.,UPDATE_GLOBAL_OUTPUT_ON=.TRUE.
-    ! Enabled for the GPU production path; --gc keeps the CPU reference path.
+    LOGICAL :: GPU_DEBUG_H2D_D2H=.FALSE.,GPU_IO_ON=.TRUE.,UPDATE_GLOBAL_OUTPUT_ON=.TRUE.
+    ! Enabled for the GPU production path; --gc keeps the CPU reference kernels.
     LOGICAL :: HT_1D_THIN_WALL_ON=.FALSE.
     LOGICAL :: COMPUTE_VISCOSITY_ON=.TRUE.,MASS_FINITE_DIFFERENCES_ON=.TRUE.,DENSITY_GPU_ON=.TRUE.
     LOGICAL :: MESH_EXCHANGE_1_ON=.FALSE.,MESH_EXCHANGE_3_ON=.FALSE.,MESH_EXCHANGE_4_ON=.FALSE.
