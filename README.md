@@ -1,6 +1,6 @@
 # GFDS
 
-Version: 1.0
+Version: 2.0
 
 GFDS is a CUDA Fortran branch of the Fire Dynamics Simulator (FDS) for NVIDIA GPUs. It calculates three-dimensional low-Mach-number flow, multi-species transport, combustion, thermal radiation, and wall heat transfer. It also supports multi-mesh calculations on one or more GPUs.
 
@@ -35,10 +35,11 @@ The resulting executable is `build/fds`.
 
 ## Run
 
-Run a case in GPU mode:
+Example:
 
 ```bash
-mpirun -np 1 build/fds "case/case-3-Billaud/RA6.fds" --g
+cd path/to/GFDS/case/case-7-Speedup/SC/1MESH
+mpirun -np 1 path/to/GFDS/run/fds SC_1000_1.fds
 ```
 
 The execution modes are:
