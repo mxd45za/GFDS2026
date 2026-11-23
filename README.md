@@ -53,13 +53,15 @@ The execution modes are:
 A one-to-one mapping between MPI processes and GPUs is recommended. For example, run a four-mesh case with four MPI processes and four GPUs:
 
 ```bash
-mpirun -np 4 build/fds "case/case-7-Speedup/Arup Tunnel/4MESH/T_100_4.fds" --g
+cd "path/to/GFDS/case/case-7-Speedup/Arup_Tunnel/4MESH"
+mpirun -np 4 path/to/GFDS/run/fds T_100_4.fds
 ```
 
 Fewer MPI processes can also run a multi-mesh case when fewer GPUs are available. For example, one MPI process can run all four meshes on one GPU:
 
 ```bash
-mpirun -np 1 build/fds "case/case-7-Speedup/Arup Tunnel/4MESH/T_100_4.fds" --g
+cd "path/to/GFDS/case/case-7-Speedup/Arup_Tunnel/4MESH"
+mpirun -np 1 path/to/GFDS/run/fds T_100_4.fds
 ```
 
 ## Python Plotting
