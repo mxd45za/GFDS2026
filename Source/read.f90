@@ -11956,7 +11956,39 @@ MESH_LOOP_1: DO NM=1,NMESHES
 
    READ_VENT_LOOP: DO
 
-      CALL SET_VENT_DEFAULTS
+      AREA_ADJUST       = .TRUE.
+      COLOR             = 'null'
+      CTRL_ID           = 'null'
+      DB                = 'null'
+      DEVC_ID           = 'null'
+      DYNAMIC_PRESSURE  = 0._EB
+      GEOM              = .FALSE.
+      ID                = 'null'
+      IOR               = 0
+      L_EDDY            = 0._EB
+      L_EDDY_IJ         = 0._EB
+      MB                = 'null'
+      MULT_ID           = 'null'
+      N_EDDY            = 0
+      OBST_ID           = 'null'
+      OUTLINE           = .FALSE.
+      PBX               = -1.E6_EB
+      PBY               = -1.E6_EB
+      PBZ               = -1.E6_EB
+      PRESSURE_RAMP     = 'null'
+      RADIUS            = -1._EB
+      REYNOLDS_STRESS   = 0._EB
+      RGB               = -1
+      SPREAD_RATE       = -1._EB
+      SURF_ID           = 'null'
+      TEXTURE_ORIGIN    = -999._EB
+      TMP_EXTERIOR      = -1000.
+      TMP_EXTERIOR_RAMP = 'null'
+      TRANSPARENCY      = 1._EB
+      UVW               = -1.E12_EB
+      VEL               = -1.E12_EB
+      VEL_RMS           = 0._EB
+      XYZ               = -1.E6_EB
 
       N_TOTAL = N_TOTAL + 1
 
@@ -12611,45 +12643,6 @@ MESH_LOOP_2: DO NM=1,NMESHES
 ENDDO MESH_LOOP_2
 
 CONTAINS
-
-
-SUBROUTINE SET_VENT_DEFAULTS
-
-AREA_ADJUST       = .TRUE.
-COLOR             = 'null'
-CTRL_ID           = 'null'
-DB                = 'null'
-DEVC_ID           = 'null'
-DYNAMIC_PRESSURE  = 0._EB
-GEOM              = .FALSE.
-ID                = 'null'
-IOR               = 0
-L_EDDY            = 0._EB
-L_EDDY_IJ         = 0._EB
-MB                = 'null'
-MULT_ID           = 'null'
-N_EDDY            = 0
-OBST_ID           = 'null'
-OUTLINE           = .FALSE.
-PBX               = -1.E6_EB
-PBY               = -1.E6_EB
-PBZ               = -1.E6_EB
-PRESSURE_RAMP     = 'null'
-RADIUS            = -1._EB
-REYNOLDS_STRESS   = 0._EB
-RGB               = -1
-SPREAD_RATE       = -1._EB
-SURF_ID           = 'null'
-TEXTURE_ORIGIN    = -999._EB
-TMP_EXTERIOR      = -1000.
-TMP_EXTERIOR_RAMP = 'null'
-TRANSPARENCY      = 1._EB
-UVW               = -1.E12_EB
-VEL               = -1.E12_EB ! experimental (rjm)
-VEL_RMS           = 0._EB
-XYZ               = -1.E6_EB
-
-END SUBROUTINE SET_VENT_DEFAULTS
 
 
 !> \brief Define VENTs that the user has not explicitly defined

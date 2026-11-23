@@ -49,11 +49,11 @@ USE G_ERRO, ONLY: GPU_WAIT
 USE G_CONS
 USE G_MESH
 USE G_PART, ONLY: INITIALIZE_GPU_PARTICLES,SYNC_GPU_PARTICLE_INSERTIONS,ADVANCE_GPU_PARTICLES, &
-                  CHECK_GPU_PARTICLE_MIGRATION, &
-                  APPLY_GPU_PARTICLE_DRAG,SYNC_GPU_PARTICLES_TO_CPU,FINISH_GPU_PARTICLES
+                  APPLY_GPU_PARTICLE_DRAG,SYNC_GPU_PARTICLES_TO_CPU,FINISH_GPU_PARTICLES,GPU_PARTICLE_COUNT
 USE G_INIT
 USE G_FUNC
 USE G_HT1D, ONLY: HT1D_SYNC_OUTPUT_D2H
+USE G_HVAC, ONLY: SYNC_GPU_HVAC_BC_INPUT,FINISH_GPU_HVAC
 USE HT3D_GPU, ONLY: HT3D_INIT,HT3D_HAS_MESH,HT3D_EXCHANGE,HT3D_SCATTER
 USE G_MASS
 USE G_WALL
@@ -73,14 +73,11 @@ IMPLICIT NONE
 ! Miscellaneous declarations
 
 LOGICAL  :: EX=.FALSE.,DIAGNOSTICS,CTRL_STOP_STATUS,CHECK_FREEZE_VELOCITY=.TRUE.,EXTERNAL_FAIL
-INTEGER  :: LO10,NM,IZERO,ANG_INC_COUNTER,PARTICLE_COUNT_BEFORE_OUTPUT
+INTEGER  :: LO10,NM,IZERO,ANG_INC_COUNTER
 REAL(EB) :: T,DT,TNOW
 REAL :: CPUTIME
 REAL(EB), ALLOCATABLE, DIMENSION(:) ::  TC_ARRAY,DT_NEW
 INTEGER, ALLOCATABLE, DIMENSION(:) ::  N_VALUES
-INTEGER, ALLOCATABLE, DIMENSION(:) ::  GPU_PARTICLE_NLP_BEFORE
-LOGICAL, ALLOCATABLE, DIMENSION(:) ::  GPU_PARTICLE_REBUILD
-LOGICAL :: GPU_PARTICLE_MIGRATION_PENDING,GPU_PARTICLE_MIGRATION_GLOBAL
 LOGICAL, ALLOCATABLE, DIMENSION(:) :: GPU_PARTICLE_SYNC_DONE
 LOGICAL :: GPU_PDPA_REQUIRED=.FALSE.
 REAL(EB), ALLOCATABLE, DIMENSION(:,:) ::  TC2_ARRAY
@@ -1098,6 +1095,8 @@ CALL END_FDS
 
 ELSE
 
+   IF (GPU_DEVICE_ON .AND. HVAC_SOLVE .AND. CC_IBM) &
+      ERROR STOP 'GPU HVAC with CC_IBM is not supported yet; use --c/--gc'
    IF (GPU_DEVICE_ON) THEN
    ! Bind each local MPI rank to a visible GPU before allocating device data.
    CALL MPI_COMM_SPLIT_TYPE(MPI_COMM_WORLD,MPI_COMM_TYPE_SHARED,0, &
@@ -1148,9 +1147,7 @@ ELSE
       CALL INITIALIZE_GPU_OBSCURATION(NM)
       CALL INITIALIZE_GPU_PARTICLES(NM)
    ENDDO
-   ALLOCATE(GPU_PARTICLE_NLP_BEFORE(NMESHES),GPU_PARTICLE_REBUILD(NMESHES),GPU_PARTICLE_SYNC_DONE(NMESHES))
-   GPU_PARTICLE_NLP_BEFORE = 0
-   GPU_PARTICLE_REBUILD = .FALSE.
+   ALLOCATE(GPU_PARTICLE_SYNC_DONE(NMESHES))
    GPU_PARTICLE_SYNC_DONE = .FALSE.
    DO N=1,N_DEVC
       IF (DEVICE(N)%QUANTITY_INDEX(1)==231) THEN
@@ -1213,7 +1210,7 @@ ELSE
    IF (MY_RANK==0) CALL WRITE_GPU_TIME_LOOP_BEGIN(WALL_CLOCK_START)
    MAIN_LOOP_GPU: DO
       ICYC  = ICYC + 1   ! Time step iterations
-      CALL MODEL_TIME_BEGIN_STEP(ICYC)
+      CALL MODEL_TIME_BEGIN_STEP(ICYC,T)
       IF (GPU_DEVICE_ON) GPU_PARTICLE_SYNC_DONE = .FALSE.
 
       ! Do not print out general diagnostics into .out file every time step
@@ -1253,29 +1250,24 @@ ELSE
       CORRECTOR = .FALSE.
       FIRST_PASS = .TRUE.
 
+      CALL MODEL_TIME_START(MT_PARTICLE,ICYC)
       DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
          CALL INSERT_ALL_PARTICLES(T,NM)
          IF (GPU_DEVICE_ON) CALL SYNC_GPU_PARTICLE_INSERTIONS(NM)
       ENDDO
 
-      ! Exchange particles inserted into a neighboring mesh before the GPU
-      ! predictor uses the particle arrays. The CPU path already performs
-      ! this exchange; the GPU path must also refresh the destination arrays
-      ! after the receive completes.
-      IF (FIRST_PASS .AND. MPI_PARTICLE_EXCHANGE) THEN
+      ! Newly inserted particles also acquire their destination on the GPU.
+      IF (GPU_DEVICE_ON) CALL GPU_MESH_EXCHANGE_PARTICLES(T)
+      IF (.NOT.GPU_DEVICE_ON .AND. FIRST_PASS .AND. MPI_PARTICLE_EXCHANGE) THEN
          CALL MPI_ALLREDUCE(MPI_IN_PLACE,EXCHANGE_INSERTED_PARTICLES,INTEGER_ONE,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,IERR)
          IF (EXCHANGE_INSERTED_PARTICLES) THEN
             CALL MESH_EXCHANGE(7)
             CALL POST_RECEIVES(11)
             CALL MESH_EXCHANGE(11)
-            IF (GPU_DEVICE_ON) THEN
-               DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-                  CALL SYNC_GPU_PARTICLE_INSERTIONS(NM)
-               ENDDO
-            ENDIF
             EXCHANGE_INSERTED_PARTICLES = .FALSE.
          ENDIF
       ENDIF
+      CALL MODEL_TIME_STOP(MT_PARTICLE,ICYC)
 
       CALL MODEL_TIME_START(MT_COMPUTE_VISCOSITY,ICYC)
       DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
@@ -1322,6 +1314,24 @@ ELSE
             IF(.NOT. VELOCITY_FLUX_ON .AND. .NOT.CYLINDRICAL) CALL VELOCITY_FLUX(T,DT,NM,APPLY_TO_ESTIMATED_VARIABLES=.FALSE.)
          ENDDO
          CALL MODEL_TIME_STOP(MT_VELOCITY_FLUX,ICYC)
+
+         ! The GC loop uses the CPU HVAC solver. Collect the same predictor
+         ! boundary state as the C loop before solving the HVAC network.
+         IF (HVAC_SOLVE) THEN
+            CALL MODEL_TIME_START(MT_HVAC,ICYC)
+            IF (FIRST_PASS) THEN
+               NODE_PROPERTIES = 0._EB
+               NODE_ZONE = 0
+               DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
+                  IF (GPU_DEVICE_ON) CALL SYNC_GPU_HVAC_BC_INPUT(NM)
+                  CALL HVAC_BC_IN(NM)
+               ENDDO
+               IF (N_MPI_PROCESSES>1) CALL EXCHANGE_HVAC_BC
+            ENDIF
+            IF (MY_RANK==0) CALL HVAC_CALC(T,DT,FIRST_PASS)
+            IF (N_MPI_PROCESSES>1) CALL EXCHANGE_HVAC_SOLUTION
+            CALL MODEL_TIME_STOP(MT_HVAC,ICYC)
+         ENDIF
 
          CALL INITIALIZE_DIVERGENCE_INTEGRALS
 
@@ -1499,6 +1509,13 @@ ELSE
          CALL MODEL_TIME_STOP(MT_COMBUSTION_LOAD_BALANCED,ICYC)
       ENDIF
 
+      IF (HVAC_SOLVE) THEN
+         CALL MODEL_TIME_START(MT_HVAC,ICYC)
+         CALL HVAC_CALC(T,DT,.TRUE.)
+         CALL MODEL_TIME_STOP(MT_HVAC,ICYC)
+      ENDIF
+
+      CALL MODEL_TIME_START(MT_PARTICLE,ICYC)
       IF (GPU_DEVICE_ON) THEN
          DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
             CALL ADVANCE_GPU_PARTICLES(T,DT,NM)
@@ -1517,54 +1534,9 @@ ELSE
          ENDIF
       ENDIF
 
-      ! GPU particles are normally resident on the device. For a multi-mesh
-      ! run, particle ownership can change after the position update. Stage
-      ! the particle state to the host only at this migration point, reuse the
-      ! existing FDS packing/MPI exchange, then rebuild only meshes whose
-      ! particle ordering changed. This is the correctness path for multi-MPI;
-      ! meshes without migration remain untouched on the GPU.
-      IF (GPU_DEVICE_ON .AND. MPI_PARTICLE_EXCHANGE) THEN
-         GPU_PARTICLE_MIGRATION_PENDING = .FALSE.
-         DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-            CALL CHECK_GPU_PARTICLE_MIGRATION(NM,GPU_PARTICLE_MIGRATION_GLOBAL)
-            GPU_PARTICLE_MIGRATION_PENDING = GPU_PARTICLE_MIGRATION_PENDING .OR. GPU_PARTICLE_MIGRATION_GLOBAL
-         ENDDO
-         CALL MPI_ALLREDUCE(GPU_PARTICLE_MIGRATION_PENDING,GPU_PARTICLE_MIGRATION_GLOBAL,1,MPI_LOGICAL,MPI_LOR, &
-                            MPI_COMM_WORLD,IERR)
-
-         IF (GPU_PARTICLE_MIGRATION_GLOBAL) THEN
-            GPU_PARTICLE_REBUILD = .FALSE.
-            DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-               GPU_PARTICLE_NLP_BEFORE(NM) = MESHES(NM)%NLP
-               CALL SYNC_GPU_PARTICLES_TO_CPU(NM)
-               GPU_PARTICLE_SYNC_DONE(NM) = .TRUE.
-            ENDDO
-            DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-               CALL POINT_TO_MESH(NM)
-               CALL REMOVE_PARTICLES(T,NM)
-               IF (MESHES(NM)%NLP/=GPU_PARTICLE_NLP_BEFORE(NM)) GPU_PARTICLE_REBUILD(NM) = .TRUE.
-               DO I=1,MESHES(NM)%N_NEIGHBORING_MESHES
-                  IF (MESHES(NM)%OMESH(MESHES(NM)%NEIGHBORING_MESH(I))%PARTICLE_SEND_BUFFER%N_ITEMS>0) &
-                     GPU_PARTICLE_REBUILD(NM) = .TRUE.
-               ENDDO
-            ENDDO
-
-            CALL MESH_EXCHANGE(7)
-            DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-               DO I=1,MESHES(NM)%N_NEIGHBORING_MESHES
-                  IF (MESHES(NM)%OMESH(MESHES(NM)%NEIGHBORING_MESH(I))%PARTICLE_RECV_BUFFER%N_ITEMS>0) &
-                     GPU_PARTICLE_REBUILD(NM) = .TRUE.
-               ENDDO
-            ENDDO
-            CALL POST_RECEIVES(11)
-            CALL MESH_EXCHANGE(11)
-
-            DO NM = LOWER_MESH_INDEX , UPPER_MESH_INDEX
-               IF (MESHES(NM)%NLP/=GPU_PARTICLE_NLP_BEFORE(NM)) GPU_PARTICLE_REBUILD(NM) = .TRUE.
-               IF (GPU_PARTICLE_REBUILD(NM)) CALL INITIALIZE_GPU_PARTICLES(NM)
-            ENDDO
-         ENDIF
-      ENDIF
+      ! Device-side removal, compaction and ownership exchange, including single-mesh exits.
+      IF (GPU_DEVICE_ON) CALL GPU_MESH_EXCHANGE_PARTICLES(T)
+      CALL MODEL_TIME_STOP(MT_PARTICLE,ICYC)
 
       WALL_COUNTER = WALL_COUNTER + 1
 
@@ -1723,18 +1695,13 @@ ELSE
       CALL MODEL_TIME_START(MT_DUMP,ICYC)
       TNOW = CURRENT_TIME()
 
-      ! PDPA devices use the current particle positions. Keep the CPU mirror
-      ! current and remove particles on the same timestep as the CPU path.
+      ! PDPA currently samples a host output mirror; it must not alter GPU ownership.
       IF (GPU_DEVICE_ON .AND. GPU_PDPA_REQUIRED) THEN
          DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
             ! GPU_IO may already have synchronized the particle fields needed
             ! by DEVC/SLCF output during this timestep. Do not transfer them a
             ! second time before evaluating the PDPA devices.
             IF (.NOT.GPU_PARTICLE_SYNC_DONE(NM)) CALL SYNC_GPU_PARTICLES_TO_CPU(NM)
-            PARTICLE_COUNT_BEFORE_OUTPUT = MESHES(NM)%NLP
-            CALL POINT_TO_MESH(NM)
-            CALL REMOVE_PARTICLES(T,NM)
-            IF (MESHES(NM)%NLP/=PARTICLE_COUNT_BEFORE_OUTPUT) CALL INITIALIZE_GPU_PARTICLES(NM)
             GPU_PARTICLE_SYNC_DONE(NM) = .TRUE.
          ENDDO
       ENDIF
@@ -1762,10 +1729,6 @@ ELSE
          IF (GPU_DEVICE_ON .AND. PARTICLE_FILE .AND. T>=PART_CLOCK(PART_COUNTER(NM))) THEN
             IF (.NOT.GPU_PARTICLE_SYNC_DONE(NM)) THEN
                CALL SYNC_GPU_PARTICLES_TO_CPU(NM)
-               PARTICLE_COUNT_BEFORE_OUTPUT = MESHES(NM)%NLP
-               CALL POINT_TO_MESH(NM)
-               CALL REMOVE_PARTICLES(T,NM)
-               IF (MESHES(NM)%NLP/=PARTICLE_COUNT_BEFORE_OUTPUT) CALL INITIALIZE_GPU_PARTICLES(NM)
                GPU_PARTICLE_SYNC_DONE(NM) = .TRUE.
             ENDIF
          ENDIF
@@ -1805,8 +1768,8 @@ ELSE
       CALL MODEL_TIME_STOP(MT_DUMP,ICYC)
 
       CALL MODEL_TIME_FINISH_STEP(ICYC,CHID)
-      ! The G loop (including GC) reports one wall-time line; do not add the C-style duplicate.
-      IF (MY_RANK==0 .AND. DIAGNOSTICS) CALL WRITE_GPU_TIME_STATUS(ICYC,T,WALL_CLOCK_START)
+      ! Sample ETA each step; emit progress lines at the existing diagnostic cadence.
+      IF (MY_RANK==0) CALL WRITE_GPU_TIME_STATUS(ICYC,T,WALL_CLOCK_START)
 
       ! Check for abnormal run stop
 
@@ -1839,7 +1802,10 @@ ELSE
 
    ! Stop the calculation
 
-   IF (GPU_DEVICE_ON) CALL FINISH_GPU_PARTICLES
+   IF (GPU_DEVICE_ON) THEN
+      CALL FINISH_GPU_HVAC
+      CALL FINISH_GPU_PARTICLES
+   ENDIF
    CALL END_FDS
 ENDIF
 
@@ -1849,12 +1815,12 @@ SUBROUTINE WRITE_GPU_INPUT_SUMMARY
    IMPLICIT NONE
 
    WRITE(LU_ERR,'(A)') '============================================================'
-   WRITE(LU_ERR,'(A,A)') ' GFDS Version            : ',GFDS_VERSION
-   WRITE(LU_ERR,'(A,I0)') ' Number of MPI Processes : ',N_MPI_PROCESSES
-   WRITE(LU_ERR,'(A,I0)') ' Number of OpenMP Threads: ',OPENMP_AVAILABLE_THREADS
+   WRITE(LU_ERR,'(A,T29,": ",A)') 'GFDS Version',GFDS_VERSION
+   WRITE(LU_ERR,'(A,T29,": ",I0)') 'Number of MPI Processes',N_MPI_PROCESSES
+   WRITE(LU_ERR,'(A,T29,": ",I0)') 'Number of OpenMP Threads',OPENMP_AVAILABLE_THREADS
    WRITE(LU_ERR,'(A)') '============================================================'
-   WRITE(LU_ERR,'(A,A)') ' Job Title               : ',TRIM(TITLE)
-   WRITE(LU_ERR,'(A,A)') ' Job ID                  : ',TRIM(CHID)
+   WRITE(LU_ERR,'(A,T29,": ",A)') 'Job Title',TRIM(TITLE)
+   WRITE(LU_ERR,'(A,T29,": ",A)') 'Job ID',TRIM(CHID)
    WRITE(LU_ERR,'(A)') '============================================================'
 END SUBROUTINE WRITE_GPU_INPUT_SUMMARY
 
@@ -1862,31 +1828,34 @@ END SUBROUTINE WRITE_GPU_INPUT_SUMMARY
 SUBROUTINE WRITE_GPU_RUN_SUMMARY
    IMPLICIT NONE
 
-   INTEGER :: IRANK,IERR_LOCAL,NM,ISTAT,ILINE
-   INTEGER :: MEM_USED_MB,MEM_TOTAL_MB
+   INTEGER :: IRANK,PREV_RANK,IERR_LOCAL,NM,ISTAT
+   INTEGER :: TOTAL_GPU_COUNT
+   INTEGER :: LOCAL_GPU_INFO(4)
    INTEGER(KIND=8) :: MEM_FREE,MEM_TOTAL
-   REAL(EB) :: MEM_USED_PERCENT
    TYPE(cudaDeviceProp) :: PROP
-   LOGICAL :: LOCAL_HT1D(NMESHES),MESH_HT1D(NMESHES),LOCAL_HT3D(NMESHES),MESH_HT3D(NMESHES),FIRST_MESH
-   CHARACTER(256) :: LOCAL_HEADER(3),RANK_HEADER(3,0:N_MPI_PROCESSES-1)
+   LOGICAL :: LOCAL_HT1D(NMESHES),MESH_HT1D(NMESHES),LOCAL_HT3D(NMESHES),MESH_HT3D(NMESHES)
+   LOGICAL, ALLOCATABLE :: UNIQUE_GPU(:)
+   INTEGER, ALLOCATABLE :: RANK_GPU_INFO(:,:)
+   CHARACTER(256) :: LOCAL_GPU_MODEL
+   CHARACTER(256), ALLOCATABLE :: RANK_GPU_MODEL(:)
+   CHARACTER(MPI_MAX_PROCESSOR_NAME), ALLOCATABLE :: RANK_HOST(:)
    CHARACTER(MAX(4,14*NMESHES)) :: LINK_LIST
+
+   ALLOCATE(RANK_GPU_INFO(4,0:N_MPI_PROCESSES-1),RANK_GPU_MODEL(0:N_MPI_PROCESSES-1), &
+            RANK_HOST(0:N_MPI_PROCESSES-1),UNIQUE_GPU(0:N_MPI_PROCESSES-1))
 
    ISTAT = CUDAGetDeviceProperties(PROP,GPU_DEVICE_ID)
    IF (ISTAT==0) THEN
-      LOCAL_HEADER(1) = ' GPU Model               : '//TRIM(PROP%name)
+      LOCAL_GPU_MODEL = TRIM(PROP%name)
    ELSE
-      LOCAL_HEADER(1) = ' GPU Model               : unavailable'
+      LOCAL_GPU_MODEL = 'unavailable'
    ENDIF
-   WRITE(LOCAL_HEADER(2),'(A,I0,A,I0)') ' MPI Rank / Device       : ',MY_RANK,' / ',GPU_DEVICE_ID
+   LOCAL_GPU_INFO = [GPU_DEVICE_ID,0,0,-1]
    ISTAT = cudaMemGetInfo(MEM_FREE,MEM_TOTAL)
    IF (ISTAT==0 .AND. MEM_TOTAL>0_8) THEN
-      MEM_USED_MB = NINT(REAL(MEM_TOTAL-MEM_FREE,EB)/(1024._EB*1024._EB))
-      MEM_TOTAL_MB = NINT(REAL(MEM_TOTAL,EB)/(1024._EB*1024._EB))
-      MEM_USED_PERCENT = 100._EB*REAL(MEM_TOTAL-MEM_FREE,EB)/REAL(MEM_TOTAL,EB)
-      WRITE(LOCAL_HEADER(3),'(A,I0,A,I0,A,F6.2,A)') ' GPU Memory used/total   : ', &
-         MEM_USED_MB,' MB / ',MEM_TOTAL_MB,' MB (',MEM_USED_PERCENT,'%)'
-   ELSE
-      LOCAL_HEADER(3) = ' GPU Memory used/total   : unavailable'
+      LOCAL_GPU_INFO(2) = NINT(REAL(MEM_TOTAL-MEM_FREE,EB)/(1024._EB*1024._EB))
+      LOCAL_GPU_INFO(3) = NINT(REAL(MEM_TOTAL,EB)/(1024._EB*1024._EB))
+      LOCAL_GPU_INFO(4) = NINT(10000._EB*REAL(MEM_TOTAL-MEM_FREE,EB)/REAL(MEM_TOTAL,EB))
    ENDIF
 
    LOCAL_HT1D = .FALSE.
@@ -1895,36 +1864,67 @@ SUBROUTINE WRITE_GPU_RUN_SUMMARY
       LOCAL_HT1D(NM) = WALL_HAS_THERMALLY_THICK(NM)
       LOCAL_HT3D(NM) = HT3D_HAS_MESH(NM)
    ENDDO
-   CALL MPI_GATHER(LOCAL_HEADER,LEN(LOCAL_HEADER)*SIZE(LOCAL_HEADER),MPI_CHARACTER, &
-                   RANK_HEADER,LEN(LOCAL_HEADER)*SIZE(LOCAL_HEADER),MPI_CHARACTER,0,MPI_COMM_WORLD,IERR_LOCAL)
+   CALL MPI_GATHER(LOCAL_GPU_INFO,SIZE(LOCAL_GPU_INFO),MPI_INTEGER,RANK_GPU_INFO,SIZE(LOCAL_GPU_INFO), &
+                   MPI_INTEGER,0,MPI_COMM_WORLD,IERR_LOCAL)
+   CALL MPI_GATHER(LOCAL_GPU_MODEL,LEN(LOCAL_GPU_MODEL),MPI_CHARACTER,RANK_GPU_MODEL,LEN(LOCAL_GPU_MODEL), &
+                   MPI_CHARACTER,0,MPI_COMM_WORLD,IERR_LOCAL)
+   CALL MPI_GATHER(PNAME,LEN(PNAME),MPI_CHARACTER,RANK_HOST,LEN(PNAME),MPI_CHARACTER,0,MPI_COMM_WORLD,IERR_LOCAL)
    CALL MPI_REDUCE(LOCAL_HT1D,MESH_HT1D,NMESHES,MPI_LOGICAL,MPI_LOR,0,MPI_COMM_WORLD,IERR_LOCAL)
    CALL MPI_REDUCE(LOCAL_HT3D,MESH_HT3D,NMESHES,MPI_LOGICAL,MPI_LOR,0,MPI_COMM_WORLD,IERR_LOCAL)
 
-   ! A single writer keeps the MPI launcher from interleaving summary lines.
+   ! Count each physical device once, even when several MPI ranks share it.
    IF (MY_RANK==0) THEN
-      WRITE(LU_ERR,'(A)') '============================================================'
+      UNIQUE_GPU = .TRUE.
+      TOTAL_GPU_COUNT = 0
       DO IRANK=0,N_MPI_PROCESSES-1
-         DO ILINE=1,3
-            WRITE(LU_ERR,'(A)') TRIM(RANK_HEADER(ILINE,IRANK))
+         DO PREV_RANK=0,IRANK-1
+            IF (TRIM(RANK_HOST(PREV_RANK))==TRIM(RANK_HOST(IRANK)) .AND. &
+                RANK_GPU_INFO(1,PREV_RANK)==RANK_GPU_INFO(1,IRANK)) THEN
+               UNIQUE_GPU(IRANK) = .FALSE.
+               EXIT
+            ENDIF
          ENDDO
-         WRITE(LU_ERR,'(A)') '------------------------------------------------------------'
-         FIRST_MESH = .TRUE.
+         IF (UNIQUE_GPU(IRANK)) TOTAL_GPU_COUNT = TOTAL_GPU_COUNT+1
+      ENDDO
+
+      WRITE(LU_ERR,'(A)') '-------------------------------Summary-----------------------------------------------'
+      WRITE(LU_ERR,'(A,T29,": ",I0)') 'Total GPU number',TOTAL_GPU_COUNT
+      WRITE(LU_ERR,'(A,T29,": ",I0)') 'Meshes number',NMESHES
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'Radiation',TRIM(MERGE('ON ','OFF',RADIATION))
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'Combustion',TRIM(MERGE('ON ','OFF',N_REACTIONS>0))
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'HT3D',TRIM(MERGE('ON ','OFF',ANY(MESH_HT3D)))
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'HT1D',TRIM(MERGE('ON ','OFF',ANY(MESH_HT1D)))
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'PARTICLE',TRIM(MERGE('ON ','OFF',PARTICLE_FILE))
+      WRITE(LU_ERR,'(A,T29,": ",A)') 'HVAC',TRIM(MERGE('ON ','OFF',HVAC_SOLVE))
+      WRITE(LU_ERR,'(A)') '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+
+      DO IRANK=0,N_MPI_PROCESSES-1
+         IF (.NOT.UNIQUE_GPU(IRANK)) CYCLE
+         WRITE(LU_ERR,'(A,T29,": ",A)') 'GPU Model',TRIM(RANK_GPU_MODEL(IRANK))
+         WRITE(LU_ERR,'(A,T29,": ",I0)') 'Device',RANK_GPU_INFO(1,IRANK)
+         WRITE(LU_ERR,'(A,T29,": ",A)') 'Host',TRIM(RANK_HOST(IRANK))
+         IF (RANK_GPU_INFO(4,IRANK)>=0) THEN
+            WRITE(LU_ERR,'(A,T29,": ",I0,A,I0,A,F6.2,A)') 'GPU Memory used/total', &
+               RANK_GPU_INFO(2,IRANK),' MB / ',RANK_GPU_INFO(3,IRANK),' MB (', &
+               REAL(RANK_GPU_INFO(4,IRANK),EB)/100._EB,'%)'
+         ELSE
+            WRITE(LU_ERR,'(A,T29,": ",A)') 'GPU Memory used/total','unavailable'
+         ENDIF
+         WRITE(LU_ERR,'(A)') '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+      ENDDO
+
+      ! Rank-to-device ownership and mesh placement are reported separately.
+      DO IRANK=0,N_MPI_PROCESSES-1
+         WRITE(LU_ERR,'(A,T29,": ",I0,A,I0)') 'MPI Rank / Device',IRANK,' / ',RANK_GPU_INFO(1,IRANK)
          DO NM=1,NMESHES
             IF (PROCESS(NM)/=IRANK) CYCLE
-            IF (.NOT.FIRST_MESH) WRITE(LU_ERR,'(A)') ''
-            FIRST_MESH = .FALSE.
-            WRITE(LU_ERR,'(A,I0)') ' Mesh index              : ',NM
+            WRITE(LU_ERR,'(A,T29,": ",I0)') 'Mesh index',NM
             CALL BUILD_MESH_LINK_LIST(NM,LINK_LIST)
-            WRITE(LU_ERR,'(A,A)') ' Connected meshes        : ',TRIM(LINK_LIST)
-            WRITE(LU_ERR,'(A,I0,A,I0,A,I0)') ' Grid scale              : ', &
+            WRITE(LU_ERR,'(A,T29,": ",A)') 'Connected meshes',TRIM(LINK_LIST)
+            WRITE(LU_ERR,'(A,T29,": ",I0,A,I0,A,I0)') 'Grid scale', &
                MESHES(NM)%IBAR,' x ',MESHES(NM)%JBAR,' x ',MESHES(NM)%KBAR
-            WRITE(LU_ERR,'(A,A)') ' Radiation               : ',TRIM(MERGE('ON ','OFF',RADIATION))
-            WRITE(LU_ERR,'(A,A)') ' Combustion              : ',TRIM(MERGE('ON ','OFF',N_REACTIONS>0))
-            WRITE(LU_ERR,'(A,A)') ' PARTICLE                : ',TRIM(MERGE('ON ','OFF',PARTICLE_FILE))
-            WRITE(LU_ERR,'(A,A)') ' HT3D                    : ',TRIM(MERGE('ON ','OFF',MESH_HT3D(NM)))
-            WRITE(LU_ERR,'(A,A)') ' HT1D                    : ',TRIM(MERGE('ON ','OFF',MESH_HT1D(NM)))
          ENDDO
-         WRITE(LU_ERR,'(A)') '============================================================'
+         WRITE(LU_ERR,'(A)') '========================================================================================'
       ENDDO
       FLUSH(LU_ERR)
    ENDIF
@@ -5130,7 +5130,7 @@ DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
    MESH_SEND%INTS(13)  = MESHES(NM)%I_VN
    MESH_SEND%INTS(14)  = MESHES(NM)%J_VN
    MESH_SEND%INTS(15)  = MESHES(NM)%K_VN
-   MESH_SEND%INTS(16)  = MESHES(NM)%NLP
+   MESH_SEND%INTS(16)  = GPU_PARTICLE_COUNT(NM)
    CALL MPI_SSEND(MESH_SEND, 1, MESH_STRUCT_TYPE, 0, 1, MPI_COMM_WORLD, &
        IERR)
 ENDDO
@@ -5648,6 +5648,10 @@ SUBROUTINE GPU_RESTART_SYNC(NM)
    TYPE(OMESH_TYPE), POINTER :: OM
    TYPE(GPU_OMESH_TYPE), POINTER :: GOM
 
+   IF (.NOT.GPU_PARTICLE_SYNC_DONE(NM)) THEN
+      CALL SYNC_GPU_PARTICLES_TO_CPU(NM)
+      GPU_PARTICLE_SYNC_DONE(NM) = .TRUE.
+   ENDIF
    CALL WALL_SYNC_GPU_STATE_TO_CPU(NM)
    D = GM%D_D
    DS = GM%DS_D
@@ -5992,7 +5996,9 @@ SUBROUTINE GPU_REQUIRE_OUTPUT_QUANTITY(IND,Y_INDEX,Z_INDEX,VELO_INDEX,REQ,OUTPUT
          REQ%Q=.TRUE.; REQ%MIX_TIME=.TRUE.
       CASE(502)
          REQ%CHI_R=.TRUE.
-      CASE(170:175,179:186,231,434:459)
+      CASE(185) ! NUMBER OF PARTICLES uses the exchange count, not the host particle mirror.
+         RETURN
+      CASE(170:175,179:184,186,231,434:459)
          REQ%PARTICLE=.TRUE.
       CASE DEFAULT
          WRITE(MESSAGE,'(A,A,A,A,A,I0,A)') 'ERROR: GPU ',TRIM(OUTPUT_KIND),' output ', &
