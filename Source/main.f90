@@ -6000,6 +6000,8 @@ SUBROUTINE GPU_REQUIRE_OUTPUT_QUANTITY(IND,Y_INDEX,Z_INDEX,VELO_INDEX,REQ,OUTPUT
          RETURN
       CASE(170:175,179:184,186,231,434:459)
          REQ%PARTICLE=.TRUE.
+      CASE(300:350) ! HVAC outputs are computed from host-side duct and node state.
+         CONTINUE
       CASE DEFAULT
          WRITE(MESSAGE,'(A,A,A,A,A,I0,A)') 'ERROR: GPU ',TRIM(OUTPUT_KIND),' output ', &
             TRIM(OUTPUT_QUANTITY(IND)%NAME),' (index ',IND,') has no defined D2H field map.'

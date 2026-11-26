@@ -5,7 +5,7 @@
 MODULE G_INIT
     USE G_MESH_POINTERS
     USE G_CONS
-    USE GLOBAL_CONSTANTS, ONLY: HVAC_SOLVE
+    USE GLOBAL_CONSTANTS, ONLY: HVAC_SOLVE,PYROLYSIS_PREDICTED
     USE DEVICE_VARIABLES, ONLY: N_DEVC
     USE G_POIS, ONLY: INITIALIZE_GPU_POISSON_SOLVER
     USE G_HT1D, ONLY: INITIALIZE_GPU_HT1D,HT1D_GPU_WALL_ACTIVE
@@ -19,10 +19,27 @@ MODULE G_INIT
             TYPE(WALL_TYPE), POINTER :: WC
             TYPE(SURFACE_TYPE), POINTER :: SF
 
-            ! HVAC cases currently use the CPU WALL_BC/HT1D fallback inside
-            ! WALL_BC_GPU, so the GPU-only HT1D eligibility check does not
-            ! apply to their thermally thick surfaces.
-            IF (.NOT.WALL_BC_ON .OR. HVAC_SOLVE) RETURN
+            IF (.NOT.WALL_BC_ON) RETURN
+
+            ! Predicted material pyrolysis is not yet advanced by the GPU
+            ! HT1D solver. Check this before the HVAC exception below so an
+            ! HVAC+pyrolysis case cannot silently skip its solid reaction.
+            DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
+                DO IW=1,MESHES(NM)%N_EXTERNAL_WALL_CELLS+MESHES(NM)%N_INTERNAL_WALL_CELLS
+                    WC => MESHES(NM)%WALL(IW)
+                    IF (WC%BOUNDARY_TYPE==NULL_BOUNDARY) CYCLE
+                    IF (WC%SURF_INDEX<1 .OR. WC%SURF_INDEX>SIZE(SURFACE)) CYCLE
+                    SF => SURFACE(WC%SURF_INDEX)
+                    IF (SF%THERMAL_BC_INDEX/=THERMALLY_THICK .OR. SF%PYROLYSIS_MODEL/=PYROLYSIS_PREDICTED) CYCLE
+                    WRITE(LU_ERR,'(A,I0,A,I0,A,A)') 'ERROR: GPU solid pyrolysis is not supported yet, mesh ',NM, &
+                        ', wall ',IW,', SURF=',TRIM(SF%ID)
+                    ERROR STOP 'GPU predicted material pyrolysis unavailable; use --c/--gc'
+                ENDDO
+            ENDDO
+
+            ! HVAC boundaries have a separate GPU boundary treatment; skip
+            ! the generic HT1D eligibility check for the remaining surfaces.
+            IF (HVAC_SOLVE) RETURN
             DO NM=LOWER_MESH_INDEX,UPPER_MESH_INDEX
                 DO IW=1,MESHES(NM)%N_EXTERNAL_WALL_CELLS+MESHES(NM)%N_INTERNAL_WALL_CELLS
                     WC => MESHES(NM)%WALL(IW)
